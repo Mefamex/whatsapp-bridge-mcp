@@ -96,6 +96,22 @@ func (f *fakeWA) RevokeMessage(_ context.Context, to, _ string) error {
 	return nil
 }
 
+func (f *fakeWA) SendLocation(_ context.Context, req wabridge.LocationRequest) (string, error) {
+	if f.sendErr != nil {
+		return "", f.sendErr
+	}
+	f.lastTo = req.To
+	return req.To, nil
+}
+
+func (f *fakeWA) SendContact(_ context.Context, req wabridge.ContactRequest) (string, error) {
+	if f.sendErr != nil {
+		return "", f.sendErr
+	}
+	f.lastTo = req.To
+	return req.To, nil
+}
+
 func (f *fakeWA) Contacts(context.Context) ([]wabridge.Contact, error) {
 	return []wabridge.Contact{{JID: "a@s.whatsapp.net", Name: "A"}}, nil
 }
@@ -581,6 +597,46 @@ func TestRevokeMessage(t *testing.T) {
 	rec = httptest.NewRecorder()
 	srv.revokeMessage(rec, httptest.NewRequest(http.MethodPost, "/revoke",
 		bytes.NewBufferString(`{"to":"905551234567","message_id":"MSG123"}`)))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestSendLocation(t *testing.T) {
+	wa := &fakeWA{loggedIn: true, connected: true}
+	srv := newServer(wa, nil)
+
+	// Hatalı gövde: to eksik
+	rec := httptest.NewRecorder()
+	srv.sendLocation(rec, httptest.NewRequest(http.MethodPost, "/send-location", bytes.NewBufferString(`{"to":""}`)))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	// Başarılı konum
+	rec = httptest.NewRecorder()
+	srv.sendLocation(rec, httptest.NewRequest(http.MethodPost, "/send-location",
+		bytes.NewBufferString(`{"to":"905551234567","latitude":41.0082,"longitude":28.9784,"name":"Ayasofya"}`)))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestSendContact(t *testing.T) {
+	wa := &fakeWA{loggedIn: true, connected: true}
+	srv := newServer(wa, nil)
+
+	// Hatalı gövde: to veya name eksik
+	rec := httptest.NewRecorder()
+	srv.sendContact(rec, httptest.NewRequest(http.MethodPost, "/send-contact", bytes.NewBufferString(`{"to":""}`)))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	// Başarılı kişi kartı
+	rec = httptest.NewRecorder()
+	srv.sendContact(rec, httptest.NewRequest(http.MethodPost, "/send-contact",
+		bytes.NewBufferString(`{"to":"905551234567","name":"Ahmet Yılmaz","phone":"+905551112233"}`)))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}

@@ -205,6 +205,35 @@ TOOLS = [
             "required": ["to", "message_id"],
         },
     ),
+    Tool(
+        name="whatsapp_send_location",
+        description="Send a location pin with coordinates, name and address to a WhatsApp chat",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "to": {"type": "string", "description": "Phone number or JID of the recipient"},
+                "latitude": {"type": "number", "description": "Latitude coordinate (e.g. 41.0082)"},
+                "longitude": {"type": "number", "description": "Longitude coordinate (e.g. 28.9784)"},
+                "name": {"type": "string", "description": "Optional name of the place (e.g. Ayasofya)"},
+                "address": {"type": "string", "description": "Optional street address"},
+            },
+            "required": ["to", "latitude", "longitude"],
+        },
+    ),
+    Tool(
+        name="whatsapp_send_contact",
+        description="Send a contact card (vCard) to a WhatsApp chat",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "to": {"type": "string", "description": "Phone number or JID of the recipient"},
+                "name": {"type": "string", "description": "Full name of the contact"},
+                "phone": {"type": "string", "description": "Phone number of the contact"},
+                "vcard": {"type": "string", "description": "Optional raw vCard string if custom fields are needed"},
+            },
+            "required": ["to", "name"],
+        },
+    ),
 ]
 
 

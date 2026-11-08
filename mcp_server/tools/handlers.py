@@ -314,11 +314,52 @@ class RevokeHandler(ToolHandler):
             return self._handle_generic_error(e)
 
 
+class SendLocationHandler(ToolHandler):
+    async def handle(self, arguments: Dict[str, Any]) -> CallToolResult:
+        try:
+            payload = {
+                "to": arguments["to"],
+                "latitude": arguments["latitude"],
+                "longitude": arguments["longitude"],
+            }
+            if "name" in arguments:
+                payload["name"] = arguments["name"]
+            if "address" in arguments:
+                payload["address"] = arguments["address"]
+            result = await self.api.post("/send-location", payload)
+            return self._success(result)
+        except APIError as e:
+            return self._handle_api_error(e)
+        except Exception as e:
+            return self._handle_generic_error(e)
+
+
+class SendContactHandler(ToolHandler):
+    async def handle(self, arguments: Dict[str, Any]) -> CallToolResult:
+        try:
+            payload = {
+                "to": arguments["to"],
+                "name": arguments["name"],
+            }
+            if "phone" in arguments:
+                payload["phone"] = arguments["phone"]
+            if "vcard" in arguments:
+                payload["vcard"] = arguments["vcard"]
+            result = await self.api.post("/send-contact", payload)
+            return self._success(result)
+        except APIError as e:
+            return self._handle_api_error(e)
+        except Exception as e:
+            return self._handle_generic_error(e)
+
+
 # Handler registry
 HANDLERS = {
     "whatsapp_send": SendHandler,
     "whatsapp_send_media": SendMediaHandler,
     "whatsapp_send_poll": SendPollHandler,
+    "whatsapp_send_location": SendLocationHandler,
+    "whatsapp_send_contact": SendContactHandler,
     "whatsapp_reaction": ReactionHandler,
     "whatsapp_revoke": RevokeHandler,
     "whatsapp_get_contacts": GetContactsHandler,
