@@ -16,7 +16,7 @@ import (
 )
 
 func TestTakmaAdYoksaUretilmez(t *testing.T) {
-	target := types.JID{User: "905551234567", Server: "s.whatsapp.net"}
+	target := types.JID{User: "905550000001", Server: "s.whatsapp.net"}
 
 	vakalar := []struct {
 		ad      string
@@ -37,7 +37,7 @@ func TestTakmaAdYoksaUretilmez(t *testing.T) {
 }
 
 func TestTakmaAdCozulmeyenKimlikIcinUretilir(t *testing.T) {
-	target := types.JID{User: "905551234567", Server: "s.whatsapp.net"}
+	target := types.JID{User: "905550000001", Server: "s.whatsapp.net"}
 	istendi := "12345678901234@lid"
 
 	got := takmaAdlar(istendi, target)
@@ -50,7 +50,7 @@ func TestTakmaAdCozulmeyenKimlikIcinUretilir(t *testing.T) {
 // Kırpılmazsa mesaj " boşluklu" kimlikle kaydedilir ve normal sorgu onu
 // bulamaz — yani takma ad yine işe yaramaz.
 func TestTakmaAdKirpilir(t *testing.T) {
-	target := types.JID{User: "905551234567", Server: "s.whatsapp.net"}
+	target := types.JID{User: "905550000001", Server: "s.whatsapp.net"}
 
 	got := takmaAdlar("  12345678901234@lid  ", target)
 	if len(got) != 1 {

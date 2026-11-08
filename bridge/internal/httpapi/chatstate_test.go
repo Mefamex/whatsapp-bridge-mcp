@@ -50,12 +50,12 @@ func cevap(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
 func TestMuteSustururVeSuresiGider(t *testing.T) {
 	wa := &fakeWA{connected: true}
 	rec := istek(t, newServer(wa, nil).mute,
-		`{"jid":"905551234567@s.whatsapp.net","muted":true,"for":"8h"}`)
+		`{"jid":"905550000001@s.whatsapp.net","muted":true,"for":"8h"}`)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("kod = %d: %s", rec.Code, rec.Body.String())
 	}
-	if wa.muteJID != "905551234567@s.whatsapp.net" {
+	if wa.muteJID != "905550000001@s.whatsapp.net" {
 		t.Errorf("jid = %q", wa.muteJID)
 	}
 	if !wa.muteMuted {
@@ -322,21 +322,21 @@ func TestChatStateOkunurDurumuDoner(t *testing.T) {
 
 // YANIT KANONİK KİMLİĞİ YANKILAMALI, ham girdiyi değil.
 //
-// Canlı denemede görüldü: istek "?jid=905551234567" idi, yanıt da
-// "jid":"905551234567" diyordu — oysa durum "905551234567@s.whatsapp.net"
+// Canlı denemede görüldü: istek "?jid=905550000001" idi, yanıt da
+// "jid":"905550000001" diyordu — oysa durum "905550000001@s.whatsapp.net"
 // üzerinden okunmuştu. Bir kanıt endpoint'i başka sohbeti gösterip kendi
 // girdisini yankılarsa, kanıt hangi sohbete ait belirsizdir.
 func TestChatStateKanonikJidYankilar(t *testing.T) {
 	wa := &fakeWA{connected: true, chatState: wabridge.ChatState{
-		JID: "905551234567@s.whatsapp.net",
+		JID: "905550000001@s.whatsapp.net",
 	}}
 	srv := newServer(wa, nil)
 	rec := httptest.NewRecorder()
 	// Sunucusuz kimlik: köprü @s.whatsapp.net ekler.
-	srv.chatState(rec, httptest.NewRequest(http.MethodGet, "/chat-state?jid=905551234567", nil))
+	srv.chatState(rec, httptest.NewRequest(http.MethodGet, "/chat-state?jid=905550000001", nil))
 
 	got, _ := cevap(t, rec)["jid"].(string)
-	if got != "905551234567@s.whatsapp.net" {
+	if got != "905550000001@s.whatsapp.net" {
 		t.Errorf("jid = %q, want kanonik biçim", got)
 	}
 }

@@ -40,7 +40,7 @@ func TestEndpointsRefuseWhenOnlyPairedNotConnected(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	srv.sendText(rec, httptest.NewRequest(http.MethodPost, "/send",
-		bytes.NewBufferString(`{"to":"905551234567","text":"hi"}`)))
+		bytes.NewBufferString(`{"to":"905550000001","text":"hi"}`)))
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("send status = %d, want 503 when paired but not connected", rec.Code)
 	}
@@ -52,7 +52,7 @@ func TestEndpointsRefuseWhenOnlyPairedNotConnected(t *testing.T) {
 	}
 
 	rec = httptest.NewRecorder()
-	srv.routerVars(rec, "/messages/905551234567", map[string]string{"jid": "905551234567"}, srv.messagesHandler)
+	srv.routerVars(rec, "/messages/905550000001", map[string]string{"jid": "905550000001"}, srv.messagesHandler)
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("messages status = %d, want 503", rec.Code)
 	}

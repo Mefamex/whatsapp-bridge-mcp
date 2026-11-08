@@ -105,7 +105,7 @@ func (s *Server) chatState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	yanit := map[string]any{
-		// Kanonik kimlik: durumun okunduğu sohbet. İstek "905551234567"
+		// Kanonik kimlik: durumun okunduğu sohbet. İstek "905550000001"
 		// ise burada tam biçim görünür.
 		"jid":      durum.JID,
 		"muted":    durum.Muted(),

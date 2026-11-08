@@ -28,7 +28,7 @@ func (f fakeLIDs) GetPNForLID(_ context.Context, lid types.JID) (types.JID, erro
 // çözülmesini zorunlu kılıyor.
 func TestResolveTargetMapsLIDToPhoneNumber(t *testing.T) {
 	lids := fakeLIDs{byLID: map[string]types.JID{
-		"12345678901234@lid": types.NewJID("905551234567", types.DefaultUserServer),
+		"12345678901234@lid": types.NewJID("905550000001", types.DefaultUserServer),
 	}}
 
 	got, err := resolveTarget(context.Background(), lids, "12345678901234@lid")
@@ -36,8 +36,8 @@ func TestResolveTargetMapsLIDToPhoneNumber(t *testing.T) {
 		t.Fatalf("resolveTarget: %v", err)
 	}
 
-	if got.User != "905551234567" || got.Server != types.DefaultUserServer {
-		t.Errorf("got %s, want 905551234567@s.whatsapp.net", got)
+	if got.User != "905550000001" || got.Server != types.DefaultUserServer {
+		t.Errorf("got %s, want 905550000001@s.whatsapp.net", got)
 	}
 }
 
@@ -47,11 +47,11 @@ func TestResolveTargetLeavesPhoneNumbersAlone(t *testing.T) {
 	// Hata veren depo, "sorgu yapılmadı" kanıtıdır.
 	lids := fakeLIDs{err: errors.New("depo hiç sorgulanmamalıydı")}
 
-	got, err := resolveTarget(context.Background(), lids, "905551234567@s.whatsapp.net")
+	got, err := resolveTarget(context.Background(), lids, "905550000001@s.whatsapp.net")
 	if err != nil {
 		t.Fatalf("resolveTarget: %v", err)
 	}
-	if got.String() != "905551234567@s.whatsapp.net" {
+	if got.String() != "905550000001@s.whatsapp.net" {
 		t.Errorf("got %s, want unchanged", got)
 	}
 }
@@ -113,7 +113,7 @@ func TestResolveTargetRejectsAnEmptyMapping(t *testing.T) {
 // @s.whatsapp.net yerine yanlış sunucu dönen bir eşleme kabul edilmemeli.
 func TestResolveTargetRejectsANonPhoneMapping(t *testing.T) {
 	lids := fakeLIDs{byLID: map[string]types.JID{
-		"99999@lid": types.NewJID("905551234567", "example.com"),
+		"99999@lid": types.NewJID("905550000001", "example.com"),
 	}}
 
 	got, err := resolveTarget(context.Background(), lids, "99999@lid")

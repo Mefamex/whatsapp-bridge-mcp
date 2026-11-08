@@ -18,7 +18,7 @@ func TestTakmaAdIkiKimligiBirdenKapsar(t *testing.T) {
 	s := New(0)
 	s.Add(Message{
 		ID:       "M1",
-		From:     "905551234567@s.whatsapp.net",
+		From:     "905550000001@s.whatsapp.net",
 		Sender:   "905550000005:28@s.whatsapp.net",
 		IsFromMe: true,
 		Text:     "cevap",
@@ -27,7 +27,7 @@ func TestTakmaAdIkiKimligiBirdenKapsar(t *testing.T) {
 
 	for _, sorgu := range []string{
 		"12345678901234@lid",          // istenen kimlik
-		"905551234567@s.whatsapp.net", // çözülmüş kimlik
+		"905550000001@s.whatsapp.net", // çözülmüş kimlik
 	} {
 		got := s.Recent(sorgu, 10)
 		if len(got) != 1 {
@@ -42,7 +42,7 @@ func TestTakmaAdIkiKimligiBirdenKapsar(t *testing.T) {
 func TestTakmaAdLidGorunumundeGidenMesajiGosterir(t *testing.T) {
 	s := New(0)
 	s.Add(Message{
-		From:     "905551234567@s.whatsapp.net",
+		From:     "905550000001@s.whatsapp.net",
 		Sender:   "905550000005:28@s.whatsapp.net",
 		IsFromMe: true,
 		Text:     "cevap",
@@ -96,7 +96,7 @@ func TestTakmaAdSiralamayiBozmaz(t *testing.T) {
 	for _, id := range []string{"B", "C", "D"} {
 		s.Add(Message{
 			ID:       id,
-			From:     "905551234567@s.whatsapp.net",
+			From:     "905550000001@s.whatsapp.net",
 			IsFromMe: true,
 			Text:     "m",
 			TakmaAd:  []string{"12345678901234@lid"},

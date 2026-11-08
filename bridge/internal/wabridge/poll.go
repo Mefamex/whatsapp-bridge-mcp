@@ -4,8 +4,15 @@ package wabridge
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"log"
 	"strings"
+
+	"go.mau.fi/whatsmeow/types/events"
+
+	"whatsapp-bridge/internal/msgstore"
 )
 
 // Poll sınırları WhatsApp'tan gelir: en az 2 seçenek, en çok 12.
@@ -106,4 +113,90 @@ func renderPoll(ad string, secenekler []string) string {
 		b.WriteString(secenek)
 	}
 	return b.String()
+}
+
+// ayristirSecenekler renderPoll metninden orijinal seçenekleri ayıklar.
+func ayristirSecenekler(metin string) []string {
+	var secenekler []string
+	satirlar := strings.Split(metin, "\n")
+	for _, satir := range satirlar {
+		satir = strings.TrimSpace(satir)
+		if strings.HasPrefix(satir, "• ") {
+			secenekler = append(secenekler, strings.TrimPrefix(satir, "• "))
+		}
+	}
+	return secenekler
+}
+
+// handlePollUpdate gelen bir anket oyunu deşifre eder ve normalize mesaja çevirir.
+func (s *Service) handlePollUpdate(v *events.Message) (msgstore.Message, bool) {
+	pollUpdate := v.Message.GetPollUpdateMessage()
+	if pollUpdate == nil || s.client == nil {
+		return msgstore.Message{}, false
+	}
+
+	pollVote, err := s.client.DecryptPollVote(context.Background(), v)
+	if err != nil {
+		log.Printf("⚠️ anket oyu deşifre edilemedi: %v", err)
+		return msgstore.Message{}, false
+	}
+
+	pollKey := pollUpdate.GetPollCreationMessageKey()
+	var pollID string
+	if pollKey != nil {
+		pollID = pollKey.GetID()
+	}
+
+	// Orijinal anket mesajından seçenekleri çöz
+	var secilenler []string
+	var soruMetni string
+	if pollID != "" && s.messages != nil {
+		if origMsg, ok := s.messages.ByID(pollID); ok {
+			soruMetni = origMsg.Text
+			secenekler := ayristirSecenekler(origMsg.Text)
+			hashHaritasi := make(map[string]string)
+			for _, sec := range secenekler {
+				h := sha256.Sum256([]byte(sec))
+				hashHaritasi[hex.EncodeToString(h[:])] = sec
+			}
+
+			for _, optHash := range pollVote.GetSelectedOptions() {
+				hashHex := hex.EncodeToString(optHash)
+				if secenekAdi, varMi := hashHaritasi[hashHex]; varMi {
+					secilenler = append(secilenler, secenekAdi)
+				}
+			}
+		}
+	}
+
+	secimMetni := strings.Join(secilenler, ", ")
+	if secimMetni == "" {
+		secimMetni = "Oylama güncellendi"
+	}
+
+	from := v.Info.Chat.String()
+	sender := v.Info.Sender.String()
+	direction := "in"
+	if v.Info.IsFromMe {
+		direction = "out"
+	}
+
+	var quoted *msgstore.QuotedMessage
+	if pollID != "" {
+		quoted = &msgstore.QuotedMessage{
+			ID:   pollID,
+			Text: soruMetni,
+		}
+	}
+
+	return msgstore.Message{
+		ID:        v.Info.ID,
+		Type:      "poll_vote",
+		Direction: direction,
+		From:      from,
+		Sender:    sender,
+		Timestamp: v.Info.Timestamp.Unix(),
+		Text:      secimMetni,
+		Quoted:    quoted,
+	}, true
 }

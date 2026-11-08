@@ -167,6 +167,21 @@ func (s *Service) handleMessage(v *events.Message) {
 		return
 	}
 
+	if pollMsg, ok := s.handlePollUpdate(v); ok {
+		for _, aday := range []string{pollMsg.From, pollMsg.Sender} {
+			if pn := s.lidTelefonu(aday); pn != "" && pn != pollMsg.From && !takmaAdVar(pollMsg.TakmaAd, pn) {
+				pollMsg.TakmaAd = append(pollMsg.TakmaAd, pn)
+			}
+		}
+		log.Printf("📊 [%s] POLL VOTE %s -> %s: %s",
+			time.Unix(pollMsg.Timestamp, 0).Format("15:04:05"),
+			pollMsg.Sender, pollMsg.From, pollMsg.Text,
+		)
+		s.messages.Add(pollMsg)
+		s.bus.Publish("message", pollMsg)
+		return
+	}
+
 	msg := Translate(v)
 
 	// LID takma adı: gelen mesaj LID ile gelir (`123@lid`); store'da

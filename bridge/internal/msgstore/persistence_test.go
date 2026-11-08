@@ -10,7 +10,7 @@ import (
 
 // yardimciMesaj builds a minimal message with an id and timestamp.
 func yardimciMesaj(id string, ts int64) Message {
-	return Message{ID: id, Type: "text", Direction: "in", From: "905551234567@s.whatsapp.net", Timestamp: ts, Text: id}
+	return Message{ID: id, Type: "text", Direction: "in", From: "905550000001@s.whatsapp.net", Timestamp: ts, Text: id}
 }
 
 func TestOpen_MissingFileStartsEmpty(t *testing.T) {
@@ -53,7 +53,7 @@ func TestOpen_ReplaysPersistedMessages(t *testing.T) {
 	if s2.Len() != 3 {
 		t.Fatalf("Len() = %d, want 3", s2.Len())
 	}
-	recent := s2.Recent("905551234567@s.whatsapp.net", 3)
+	recent := s2.Recent("905550000001@s.whatsapp.net", 3)
 	if len(recent) != 3 {
 		t.Fatalf("Recent len = %d, want 3", len(recent))
 	}
@@ -81,7 +81,7 @@ func TestOpen_OnlyLastCapacityReplayed(t *testing.T) {
 	}
 	// Bellekte de son 5 kaldı (eskiler "a","b","c" yüklendi mi? hayır — baştan
 	// appende devam eden dosyada 8 satır var; son 5 alınır: d,e,f,g,h).
-	recent := s2.Recent("905551234567@s.whatsapp.net", 5)
+	recent := s2.Recent("905550000001@s.whatsapp.net", 5)
 	if recent[4].ID != "d" {
 		t.Errorf("en eski replay = %q, want 'd'", recent[4].ID)
 	}
@@ -95,7 +95,7 @@ func TestOpen_SkipsCorruptLines(t *testing.T) {
 	path := filepath.Join(dir, "messages.jsonl")
 
 	// Elle bir dosya yaz: bozuk satır + geçerli satır + yarıda kesik satır.
-	content := "bu bir json degil\n" + `{"id":"iyi","type":"text","direction":"in","from":"905551234567@s.whatsapp.net","timestamp":1,"text":"saglam"}` + "\nyarida-kesik-son-satir"
+	content := "bu bir json degil\n" + `{"id":"iyi","type":"text","direction":"in","from":"905550000001@s.whatsapp.net","timestamp":1,"text":"saglam"}` + "\nyarida-kesik-son-satir"
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatalf("WriteFile: %v", err)
 	}
@@ -171,7 +171,7 @@ func TestCompact_KeepsFileBoundedAndAtomic(t *testing.T) {
 	if s2.Len() != 4 {
 		t.Fatalf("Len() = %d, want 4", s2.Len())
 	}
-	recent := s2.Recent("905551234567@s.whatsapp.net", 4)
+	recent := s2.Recent("905550000001@s.whatsapp.net", 4)
 	if recent[0].ID != "j" || recent[3].ID != "g" {
 		t.Errorf("compact sonrası yanlış mesajlar: %v %v %v %v", recent[0].ID, recent[1].ID, recent[2].ID, recent[3].ID)
 	}

@@ -226,7 +226,7 @@ func TestLidTelefonuNilClientGuvenli(t *testing.T) {
 	if got := svc.lidTelefonu("12345678901234@lid"); got != "" {
 		t.Errorf("lidTelefonu(nil client) = %q, want \"\"", got)
 	}
-	if got := svc.lidTelefonu("905551234567@s.whatsapp.net"); got != "" {
+	if got := svc.lidTelefonu("905550000001@s.whatsapp.net"); got != "" {
 		t.Errorf("lidTelefonu(non-LID) = %q, want \"\"", got)
 	}
 	if got := svc.lidTelefonu("bozuk"); got != "" {
@@ -301,7 +301,7 @@ func TestHandleMessageLidTakmaAdEklenir(t *testing.T) {
 	// Eşleşme varsa: gelen LID mesajın TakmaAd'ında telefon görünmeli,
 	// From değişmemeli.
 	lid := types.JID{User: "12345678901234", Server: types.HiddenUserServer}
-	pn := types.JID{User: "905551234567", Server: types.DefaultUserServer}
+	pn := types.JID{User: "905550000001", Server: types.DefaultUserServer}
 
 	svc := &Service{
 		bus:      eventbus.New(),

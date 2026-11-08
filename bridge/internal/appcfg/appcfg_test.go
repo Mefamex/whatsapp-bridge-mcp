@@ -9,8 +9,8 @@ import (
 
 func TestNormalizeJID(t *testing.T) {
 	cases := []struct{ in, want string }{
-		{"905551234567", "905551234567@s.whatsapp.net"},
-		{"905551234567@s.whatsapp.net", "905551234567@s.whatsapp.net"},
+		{"905550000001", "905550000001@s.whatsapp.net"},
+		{"905550000001@s.whatsapp.net", "905550000001@s.whatsapp.net"},
 		{"120363123456789@g.us", "120363123456789@g.us"},
 		{"12345@lid", "12345@lid"},
 		{"", "@s.whatsapp.net"},

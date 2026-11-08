@@ -74,8 +74,8 @@ func sohbetJID(jid string) (types.JID, error) {
 type ChatState struct {
 	// JID, durumun okunduğu KANONİK sohbet kimliği.
 	//
-	// Neden ayrı alan: istek "905551234567" (serversız) ile gelirse
-	// normalize edip "905551234567@s.whatsapp.net" üzerinde çalışılır.
+	// Neden ayrı alan: istek "905550000001" (serversız) ile gelirse
+	// normalize edip "905550000001@s.whatsapp.net" üzerinde çalışılır.
 	// Yanıt ham girdiyi yankılarsa kullanıcı "hangi sohbet?" diye
 	// durur — halbuki kanıt başka bir sohbeti gösteriyor. Bir kanıt
 	// endpoint'i kimliğini kendisi doğrulayamıyorsa işe yaramaz.
