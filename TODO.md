@@ -41,6 +41,12 @@
 - [x] **MCP Server:** `whatsapp_vote_poll(to, poll_id, options)` aracı eklendi ve test edildi.
 - [x] **Kullanıcı Canlı Testi:** Kullanıcının attığı "cevap ver bakim işaretleyebiliyon mu" anketine bot tarafından "evet" oyu verildi ve sunucuya iletildi.
 
+### 6. 🔄 Tetikleyici Otomatik Başlatma (Systemd User Autostart Service) [SIRADA 🎯]
+- [ ] **Systemd User Servisi:** `~/.config/systemd/user/whatsapp-tetikleyici.service` dosyasını oluştur.
+- [ ] **Kullanıcı Oturumuna Bağlama:** Bilgisayar açılışında `whatsapp-bridge` ile birlikte `tetikleyici`nin de otomatik ayağa kalkmasını sağla (`systemctl --user enable --now whatsapp-tetikleyici`).
+- [ ] **Yönetim Betiği Uyumu:** `tetikleyici.sh` betiğini systemd servisiyle uyumlu hâle getir veya status kontrollerini senkronize et.
+- [ ] **Canlı Test:** Servis loglarının ve başlangıç durumunun (`systemctl --user status whatsapp-tetikleyici`) doğrulanması.
+
 ---
 
 ## Kritik / Bloke
