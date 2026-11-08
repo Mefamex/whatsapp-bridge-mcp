@@ -1,0 +1,55 @@
+# =============================================================================
+# WhatsApp Bridge & MCP — Yapılandırma Dosyası (config.yaml)
+#
+# YAPILANDIRMA FELSEFESİ VE ÖNCELİK SIRASI:
+# 1. Ortam Değişkenleri (ENV)    -> [EN YÜKSEK] Çalışma anında verilenler (Örn: WHATSAPP_API_PORT=31415)
+# 2. Bu Dosyadaki Değerler       -> [ORTA] Projeye özel çalışma ayarları
+# 3. Kod İçi Dahili Varsayılan   -> [EN DÜŞÜK] Dosya silinse bile çökmeyi önleyen emniyet değerleri
+#
+# GÜVENLİK VE STANDARTLAR:
+# - GİZLİLİK YASAĞI: API anahtarları, telefon numaraları veya oturum şifreleri
+#   kesinlikle bu dosyaya yazılmaz; ortam değişkeni veya dinamik istemciden beslenir.
+# - BİRİM STANDARDI: Süre ve boyut alanlarında birim mutlaka belirtilmiştir (_sec, _mb).
+# =============================================================================
+
+# --- 1. KÖPRÜ (BRIDGE GO DAEMON) AYARLARI ---
+bridge:
+  # HTTP API ve SSE dinleme adresi
+  # Ortam değişkeni: WHATSAPP_API_HOST
+  host: "127.0.0.1"
+
+  # Dinleme portu
+  # Ortam değişkeni: WHATSAPP_API_PORT
+  port: 31415
+
+  # whatsmeow oturum SQLite dosya yolu
+  # Ortam değişkeni: WHATSAPP_DB_PATH
+  db_path: "whatsmeow.db"
+
+  # İstek zaman aşımı süresi
+  # Ortam değişkeni: WHATSAPP_TIMEOUT_SEC
+  timeout_sec: 30
+
+  # Geçmiş mesaj arabelleği kapasitesi (sohbet başına)
+  # Ortam değişkeni: WHATSAPP_MSG_CACHE_LIMIT
+  msg_cache_limit: 100
+
+# --- 2. MCP SUNUCUSU (FAST MCP) AYARLARI ---
+mcp:
+  # MCP'nin konuşacağı Bridge API taban adresi
+  # Ortam değişkeni: WHATSAPP_API_BASE
+  api_base: "http://127.0.0.1:31415"
+
+  # MCP HTTP istemcisi zaman aşımı
+  # Ortam değişkeni: WHATSAPP_API_TIMEOUT
+  timeout_sec: 30.0
+
+# --- 3. GÜNLÜK VE LOGLAMA ---
+logging:
+  # Detay seviyesi: DEBUG, INFO, WARN, ERROR
+  # Ortam değişkeni: WHATSAPP_LOG_LEVEL
+  level: "INFO"
+
+  # Log hedefi: stdout, file
+  # Ortam değişkeni: WHATSAPP_LOG_TARGET
+  target: "stdout"
