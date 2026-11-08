@@ -66,6 +66,13 @@
 - [ ] Test: aynı oturumda 2 ardışık mesajda ikincisi birincisini hatırlıyor (canlı); restart sonrası da hatırlıyor (canlı).
 - **Risk:** `--dangerously-skip-permissions` ile uzun ömürlü tek oturum = tüm WhatsApp trafiği aynı yetkili bağlamda. Güvenlik notu README'ye yazılacak.
 
+### 8. 🧹 Eski Monorepo'dan Taşınan Dosyaların PII Taraması ve Pushlanması [BEKLİYOR — sonra]
+Silinen eski `whatsapp-bridge-project` arşivinden kopyalanıp **commit'lenmemiş** duran tek nüsha dosyalar (orijinal silindi, bu kopyalar kaybolmamalı):
+- [ ] `whatsapp-tetikleyici/docs/` — eski tasarım/plan/sorun belgeleri (2026-10-04…06). **Gerçek telefon/LID numarası içerebilir**: `905551234567` / `12345678901234@lid` kuralına göre temizle, sonra commit.
+- [ ] `whatsapp-tetikleyici/tetikleyici.sh` — yönetim betiği. Artık systemd user servisi var; betik hâlâ gerekli mi karar ver (gerekiyorsa servisle uyumlu hâle getir, yoksa sil).
+- [ ] `whatsapp-bridge-mcp/sidecar/` (VoIP sidecar) — **içinde `node_modules/` var, commit'LEME**. `.gitignore`'a `sidecar/node_modules/` ekle; `rsrc-dump.txt` (322 KB) gereksiz olabilir, gözden geçir; `package-lock.json` kalsın. Sidecar ayrı repo mu olmalı, yoksa köprü reposunda mı kalmalı karar ver. Köprü şu an `WASM binary not found` uyarısı veriyor (arama özelliği kapalı).
+- [ ] Taramadan sonra: `grep -rnE "9054|9053|1234563"` ile kalan gerçek kimlik kontrolü, `make test`, commit, push.
+
 ---
 
 ## Kritik / Bloke
