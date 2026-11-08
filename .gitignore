@@ -1,0 +1,41 @@
+# Binaries and build outputs
+bin/
+dist/
+build/
+whatsapp-bridge
+bridge/whatsapp-bridge
+
+# WhatsApp session data (CRITICAL - NEVER COMMIT)
+whatsmeow.db
+whatsmeow.db-shm
+whatsmeow.db-wal
+*.db
+*.db-shm
+*.db-wal
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and runtime files
+logs/
+*.log
+*.pid
+
+# Python cache & venv
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+.directory
