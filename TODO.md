@@ -46,6 +46,26 @@
 - [x] **Kullanıcı Oturumuna Bağlama:** `systemctl --user enable --now whatsapp-tetikleyici.service` ile bilgisayar açılışında otomatik başlama aktif edildi.
 - [x] **Canlı Doğrulama:** `systemctl --user status whatsapp-tetikleyici` ile PID 363706 aktif, bağlı ve çalışıyor.
 
+### 7. 🧵 Tek Kalıcı Oturum (Sabit Session ID) — AGY / Claude / OpenCode [SIRADA 🎯]
+**Sorun:** `runAgent` (`tetikleyici/action.go`) agy ve claude için her mesajda `agy -p "<prompt>"` / `claude -p "<prompt>"` çalıştırıyor → her mesaj SIFIR bağlamlı yeni konuşma; önceki mesajı hatırlamıyor. Prompt'a yalnız son birkaç mesaj gömülüyor (bu bir hafıza değil, yama). OpenCode zaten `--session` ile sabit oturuma gidiyor.
+
+**Ölçülen bayraklar (2026-11-08, `--help` çıktısından):**
+- agy: `--conversation <ID>` (belirli konuşmayı sürdür) · `-c/--continue` (en sonuncuyu sürdür)
+- claude: `-r/--resume <session-id>` · `--session-id <uuid>` (ilk oturumu bu kimlikle KUR) · `-c`
+- opencode: `-s/--session <id>` (yoksa oluşturur) — zaten kullanılıyor
+
+**Tasarım kararı (öneri): motor başına SABİT kimlik, config'de.**
+- [ ] `tetikleyici.yaml` → `sessions:` bloğu: `agy: <conversation-id>`, `claude: <uuid>`, `opencode: ses_…`. Kural başına değil motor başına; `/agent <motor>` değişince o motorun kendi sabit oturumu devreye girer (motorlar arası geçişte bağlam taşınmaz, bilinçli).
+- [ ] `runAgent` agy dalı: `--conversation <id>` ekle. Claude dalı: `--resume <id>`; ilk kurulum için `--session-id <uuid>` (uuid'i tetikleyici üretip config'e/duruma yazar).
+- [ ] Kimlik yoksa: ilk çalıştırmada oluştur, `.tetikleyici/oturumlar.json`'a kaydet, sonrakilerde yeniden kullan (kullanıcı elle config yazmak zorunda kalmasın).
+- [ ] **AÇIK SORU (önce ölç):** agy `-p` çıktısından yeni konuşmanın ID'si nasıl alınır? (`--output-format json` denenecek; alınamıyorsa `--conversation` için ID'yi kullanıcı bir kez verir.)
+- [ ] **Eşzamanlılık:** aynı oturuma iki mesaj aynı anda gelirse çakışır. `oturumKilidiAl` (opencode için var) agy/claude'a da uygulanıyor — doğrula; mesajlar sırayla işlensin.
+- [ ] **Bağlam şişmesi:** tek oturum sonsuz uzar. Eşik (ör. N tur / token) aşılınca otomatik özet + yeni oturum veya `/session yeni` komutu. Yoksa model yavaşlar/pahalanır.
+- [ ] **Prompt sadeleştirme:** oturum hatırladığı için `buildPrompt` içindeki "Son mesajlar" penceresi sabit oturumda gereksiz tekrar — yalnız YENİ mesajı gönder (isteğe bağlı bayrak: `history_in_prompt: false`).
+- [ ] `/session` tünel komutu ile ilişki: tünel = geçici başka oturum, sabit oturum = varsayılan. `/session exit` sabit oturuma döner (bugünkü davranışla uyumlu, doğrula).
+- [ ] Test: aynı oturumda 2 ardışık mesajda ikincisi birincisini hatırlıyor (canlı); restart sonrası da hatırlıyor (canlı).
+- **Risk:** `--dangerously-skip-permissions` ile uzun ömürlü tek oturum = tüm WhatsApp trafiği aynı yetkili bağlamda. Güvenlik notu README'ye yazılacak.
+
 ---
 
 ## Kritik / Bloke
