@@ -39,3 +39,11 @@ venv/
 *.swo
 .DS_Store
 .directory
+
+# Node & Sidecar dependencies / cache
+node_modules/
+sidecar/node_modules/
+sidecar/cache/
+sidecar/rsrc-dump.txt
+*.wasm
+

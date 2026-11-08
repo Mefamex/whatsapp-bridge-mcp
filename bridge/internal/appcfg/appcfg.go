@@ -89,12 +89,30 @@ func MessagesLogPath() (string, error) {
 
 // SidecarDir returns the Node.js sidecar project directory.
 func SidecarDir() string {
+	if override := os.Getenv("WA_SIDECAR_DIR"); override != "" {
+		return override
+	}
+	for _, rel := range []string{"sidecar", "../sidecar"} {
+		if fi, err := os.Stat(rel); err == nil && fi.IsDir() {
+			if abs, err := filepath.Abs(rel); err == nil {
+				return abs
+			}
+		}
+	}
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, filepath.FromSlash(SidecarHomeSubDir))
 }
 
 // ProjectDir returns the project checkout directory.
 func ProjectDir() (string, error) {
+	if override := os.Getenv("WA_PROJECT_DIR"); override != "" {
+		return override, nil
+	}
+	if cwd, err := os.Getwd(); err == nil {
+		if fi, err := os.Stat(filepath.Join(cwd, "config.yaml")); err == nil && !fi.IsDir() {
+			return cwd, nil
+		}
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err

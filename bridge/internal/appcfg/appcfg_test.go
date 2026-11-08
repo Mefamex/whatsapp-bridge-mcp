@@ -9,8 +9,8 @@ import (
 
 func TestNormalizeJID(t *testing.T) {
 	cases := []struct{ in, want string }{
-		{"905550000001", "905550000001@s.whatsapp.net"},
-		{"905550000001@s.whatsapp.net", "905550000001@s.whatsapp.net"},
+		{"905551234567", "905551234567@s.whatsapp.net"},
+		{"905551234567@s.whatsapp.net", "905551234567@s.whatsapp.net"},
 		{"120363123456789@g.us", "120363123456789@g.us"},
 		{"12345@lid", "12345@lid"},
 		{"", "@s.whatsapp.net"},
@@ -70,3 +70,22 @@ func TestStoreDirIsCreatedAndDSNEndsWithDB(t *testing.T) {
 		t.Errorf("DBDSN() = %q, want %s plus foreign keys enabled", dsn, DBFileName)
 	}
 }
+
+func TestSidecarDirOverride(t *testing.T) {
+	t.Setenv("WA_SIDECAR_DIR", "/custom/sidecar")
+	if got := SidecarDir(); got != "/custom/sidecar" {
+		t.Errorf("SidecarDir() = %q, want /custom/sidecar", got)
+	}
+}
+
+func TestProjectDirOverride(t *testing.T) {
+	t.Setenv("WA_PROJECT_DIR", "/custom/project")
+	got, err := ProjectDir()
+	if err != nil {
+		t.Fatalf("ProjectDir() error: %v", err)
+	}
+	if got != "/custom/project" {
+		t.Errorf("ProjectDir() = %q, want /custom/project", got)
+	}
+}
+
