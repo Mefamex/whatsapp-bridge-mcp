@@ -4,6 +4,7 @@ package wabridge
 
 import (
 	"encoding/base64"
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -147,6 +148,44 @@ func classify(m *waE2E.Message) (kind, text string, media *msgstore.Media) {
 	case m.GetReactionMessage() != nil:
 		reaction := m.GetReactionMessage()
 		return "reaction", reaction.GetText(), nil
+
+	// Konum (Location)
+	case m.GetLocationMessage() != nil:
+		loc := m.GetLocationMessage()
+		metin := fmt.Sprintf("📍 Konum: %.6f, %.6f", loc.GetDegreesLatitude(), loc.GetDegreesLongitude())
+		if name := strings.TrimSpace(loc.GetName()); name != "" {
+			metin += fmt.Sprintf(" (%s)", name)
+		}
+		if addr := strings.TrimSpace(loc.GetAddress()); addr != "" {
+			metin += fmt.Sprintf(" - %s", addr)
+		}
+		metin += fmt.Sprintf("\nHarita: https://maps.google.com/?q=%.6f,%.6f", loc.GetDegreesLatitude(), loc.GetDegreesLongitude())
+		return "location", metin, nil
+
+	// Canlı Konum (Live Location)
+	case m.GetLiveLocationMessage() != nil:
+		loc := m.GetLiveLocationMessage()
+		metin := fmt.Sprintf("📍 Canlı Konum: %.6f, %.6f\nHarita: https://maps.google.com/?q=%.6f,%.6f",
+			loc.GetDegreesLatitude(), loc.GetDegreesLongitude(), loc.GetDegreesLatitude(), loc.GetDegreesLongitude())
+		if cap := strings.TrimSpace(loc.GetCaption()); cap != "" {
+			metin = cap + "\n" + metin
+		}
+		return "live_location", metin, nil
+
+	// Kişi Kartı (vCard)
+	case m.GetContactMessage() != nil:
+		cont := m.GetContactMessage()
+		metin := fmt.Sprintf("📇 Kişi Kartı: %s", cont.GetDisplayName())
+		if vcard := strings.TrimSpace(cont.GetVcard()); vcard != "" {
+			metin += "\n" + vcard
+		}
+		return "contact", metin, nil
+
+	// Kişi Listesi (Contacts Array)
+	case m.GetContactsArrayMessage() != nil:
+		arr := m.GetContactsArrayMessage()
+		metin := fmt.Sprintf("📇 Kişi Listesi: %s (%d kişi)", arr.GetDisplayName(), len(arr.GetContacts()))
+		return "contact_array", metin, nil
 
 	// Control traffic, not content: revokes, disappearing-message settings,
 	// history-sync acknowledgements. Worth naming so the log can tell a

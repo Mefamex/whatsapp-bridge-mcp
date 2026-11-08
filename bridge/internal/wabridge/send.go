@@ -316,6 +316,92 @@ func (s *Service) SendCall(ctx context.Context, to string, durationSec int) erro
 	return nil
 }
 
+// LocationRequest describes an outbound location pin.
+type LocationRequest struct {
+	To        string
+	Latitude  float64
+	Longitude float64
+	Name      string
+	Address   string
+}
+
+// SendLocation sends a location pin and returns the resolved target JID.
+func (s *Service) SendLocation(ctx context.Context, req LocationRequest) (string, error) {
+	if strings.TrimSpace(req.To) == "" {
+		return "", fmt.Errorf("to required")
+	}
+	target, err := s.resolveTarget(ctx, req.To)
+	if err != nil {
+		return "", err
+	}
+
+	locMsg := &waE2E.LocationMessage{
+		DegreesLatitude:  proto.Float64(req.Latitude),
+		DegreesLongitude: proto.Float64(req.Longitude),
+	}
+	if strings.TrimSpace(req.Name) != "" {
+		locMsg.Name = proto.String(strings.TrimSpace(req.Name))
+	}
+	if strings.TrimSpace(req.Address) != "" {
+		locMsg.Address = proto.String(strings.TrimSpace(req.Address))
+	}
+
+	msg := &waE2E.Message{LocationMessage: locMsg}
+	resp, err := s.client.SendMessage(ctx, target, msg)
+	if err != nil {
+		return "", err
+	}
+
+	metin := fmt.Sprintf("📍 Konum: %.6f, %.6f", req.Latitude, req.Longitude)
+	if req.Name != "" {
+		metin += fmt.Sprintf(" (%s)", req.Name)
+	}
+	s.recordOwnAdi(target, req.To, resp, "location", metin, nil)
+	return target.String(), nil
+}
+
+// ContactRequest describes an outbound vCard contact card.
+type ContactRequest struct {
+	To    string
+	Name  string
+	Phone string
+	Vcard string
+}
+
+// SendContact sends a contact card and returns the resolved target JID.
+func (s *Service) SendContact(ctx context.Context, req ContactRequest) (string, error) {
+	if strings.TrimSpace(req.To) == "" {
+		return "", fmt.Errorf("to required")
+	}
+	if strings.TrimSpace(req.Name) == "" {
+		return "", fmt.Errorf("name required")
+	}
+	target, err := s.resolveTarget(ctx, req.To)
+	if err != nil {
+		return "", err
+	}
+
+	vcard := req.Vcard
+	if strings.TrimSpace(vcard) == "" {
+		vcard = fmt.Sprintf("BEGIN:VCARD\nVERSION:3.0\nFN:%s\nTEL;TYPE=CELL:%s\nEND:VCARD", req.Name, req.Phone)
+	}
+
+	msg := &waE2E.Message{
+		ContactMessage: &waE2E.ContactMessage{
+			DisplayName: proto.String(req.Name),
+			Vcard:       proto.String(vcard),
+		},
+	}
+	resp, err := s.client.SendMessage(ctx, target, msg)
+	if err != nil {
+		return "", err
+	}
+
+	metin := fmt.Sprintf("📇 Kişi Kartı: %s", req.Name)
+	s.recordOwnAdi(target, req.To, resp, "contact", metin, nil)
+	return target.String(), nil
+}
+
 // mediaTypeFromMime maps a MIME type to a whatsmeow upload category.
 func mediaTypeFromMime(mime string) whatsmeow.MediaType {
 	switch {

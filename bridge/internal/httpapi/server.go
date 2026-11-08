@@ -26,6 +26,8 @@ type WhatsAppService interface {
 	SendPoll(ctx context.Context, req wabridge.PollRequest) (string, error)
 	SendReaction(ctx context.Context, to, targetID, emoji, senderJID string) error
 	RevokeMessage(ctx context.Context, to, targetID string) error
+	SendLocation(ctx context.Context, req wabridge.LocationRequest) (string, error)
+	SendContact(ctx context.Context, req wabridge.ContactRequest) (string, error)
 	SendCall(ctx context.Context, to string, durationSec int) error
 	Contacts(ctx context.Context) ([]wabridge.Contact, error)
 	Groups(ctx context.Context) ([]wabridge.Group, error)
@@ -68,6 +70,8 @@ func (s *Server) registerCoreRoutes(r *mux.Router) {
 	r.HandleFunc("/send-poll", s.sendPoll).Methods(http.MethodPost)
 	r.HandleFunc("/reaction", s.sendReaction).Methods(http.MethodPost)
 	r.HandleFunc("/revoke", s.revokeMessage).Methods(http.MethodPost)
+	r.HandleFunc("/send-location", s.sendLocation).Methods(http.MethodPost)
+	r.HandleFunc("/send-contact", s.sendContact).Methods(http.MethodPost)
 	r.HandleFunc("/call", s.sendCall).Methods(http.MethodPost)
 	r.HandleFunc("/webhook", s.webhook).Methods(http.MethodPost, http.MethodDelete, http.MethodGet)
 }

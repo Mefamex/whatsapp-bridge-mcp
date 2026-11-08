@@ -214,3 +214,75 @@ func (s *Server) sendCall(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, map[string]any{"ok": true, "to": req.To, "duration_sec": duration})
 }
+
+type locationRequest struct {
+	To        string  `json:"to"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Name      string  `json:"name,omitempty"`
+	Address   string  `json:"address,omitempty"`
+}
+
+func (s *Server) sendLocation(w http.ResponseWriter, r *http.Request) {
+	var req locationRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.To == "" {
+		http.Error(w, "to required", http.StatusBadRequest)
+		return
+	}
+	if !s.requireConnection(w) {
+		return
+	}
+
+	target, err := s.wa.SendLocation(r.Context(), wabridge.LocationRequest{
+		To:        req.To,
+		Latitude:  req.Latitude,
+		Longitude: req.Longitude,
+		Name:      req.Name,
+		Address:   req.Address,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true, "to": target})
+}
+
+type contactRequest struct {
+	To    string `json:"to"`
+	Name  string `json:"name"`
+	Phone string `json:"phone,omitempty"`
+	Vcard string `json:"vcard,omitempty"`
+}
+
+func (s *Server) sendContact(w http.ResponseWriter, r *http.Request) {
+	var req contactRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.To == "" {
+		http.Error(w, "to required", http.StatusBadRequest)
+		return
+	}
+	if req.Name == "" {
+		http.Error(w, "name required", http.StatusBadRequest)
+		return
+	}
+	if !s.requireConnection(w) {
+		return
+	}
+
+	target, err := s.wa.SendContact(r.Context(), wabridge.ContactRequest{
+		To:    req.To,
+		Name:  req.Name,
+		Phone: req.Phone,
+		Vcard: req.Vcard,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true, "to": target})
+}

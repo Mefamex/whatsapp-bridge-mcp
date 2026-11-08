@@ -14,6 +14,10 @@ from mcp_server.tools.handlers import (  # noqa: E402
     SendHandler,
     SendMediaHandler,
     SendPollHandler,
+    SendLocationHandler,
+    SendContactHandler,
+    ReactionHandler,
+    RevokeHandler,
     HealthHandler,
     AskConfirmHandler,
     AskQuickHandler,
@@ -100,6 +104,66 @@ class TestMCPHandlers(unittest.TestCase):
         self.assertIn("Deploy production?", send_data["text"])
         self.assertIn("Evet", send_data["text"])
         self.assertIn("Hayır", send_data["text"])
+
+    def test_send_location_handler(self):
+        handler = SendLocationHandler(self.mock_api)
+        result = run(
+            handler.handle(
+                {
+                    "to": "905551234567",
+                    "latitude": 41.0082,
+                    "longitude": 28.9784,
+                    "name": "Ayasofya",
+                }
+            )
+        )
+        self.assertIsInstance(result, CallToolResult)
+        self.assertFalse(result.is_error)
+        self.assertEqual(self.mock_api.calls[0][1], "/send-location")
+
+    def test_send_contact_handler(self):
+        handler = SendContactHandler(self.mock_api)
+        result = run(
+            handler.handle(
+                {
+                    "to": "905551234567",
+                    "name": "Ali Veli",
+                    "phone": "+905551112233",
+                }
+            )
+        )
+        self.assertIsInstance(result, CallToolResult)
+        self.assertFalse(result.is_error)
+        self.assertEqual(self.mock_api.calls[0][1], "/send-contact")
+
+    def test_reaction_handler(self):
+        handler = ReactionHandler(self.mock_api)
+        result = run(
+            handler.handle(
+                {
+                    "to": "905551234567",
+                    "message_id": "MSG123",
+                    "emoji": "👍",
+                }
+            )
+        )
+        self.assertIsInstance(result, CallToolResult)
+        self.assertFalse(result.is_error)
+        self.assertEqual(self.mock_api.calls[0][1], "/reaction")
+
+    def test_revoke_handler(self):
+        handler = RevokeHandler(self.mock_api)
+        result = run(
+            handler.handle(
+                {
+                    "to": "905551234567",
+                    "message_id": "MSG123",
+                }
+            )
+        )
+        self.assertIsInstance(result, CallToolResult)
+        self.assertFalse(result.is_error)
+        self.assertEqual(self.mock_api.calls[0][1], "/revoke")
 
     def test_error_handling_when_bridge_down(self):
         failing_api = MockAPIClient(fail=True)
