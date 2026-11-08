@@ -133,6 +133,62 @@ func (s *Server) sendPoll(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ok": true, "to": jid})
 }
 
+// reactionRequest is the /reaction payload.
+type reactionRequest struct {
+	To        string `json:"to"`
+	MessageID string `json:"message_id"`
+	Emoji     string `json:"emoji"`
+	SenderJID string `json:"sender_jid,omitempty"`
+}
+
+// revokeRequest is the /revoke payload.
+type revokeRequest struct {
+	To        string `json:"to"`
+	MessageID string `json:"message_id"`
+}
+
+// sendReaction sends an emoji reaction to a message.
+func (s *Server) sendReaction(w http.ResponseWriter, r *http.Request) {
+	var req reactionRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.To == "" || req.MessageID == "" {
+		http.Error(w, "to and message_id required", http.StatusBadRequest)
+		return
+	}
+	if !s.requireConnection(w) {
+		return
+	}
+
+	if err := s.wa.SendReaction(r.Context(), req.To, req.MessageID, req.Emoji, req.SenderJID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true, "to": req.To, "message_id": req.MessageID, "emoji": req.Emoji})
+}
+
+// revokeMessage deletes a message for everyone.
+func (s *Server) revokeMessage(w http.ResponseWriter, r *http.Request) {
+	var req revokeRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.To == "" || req.MessageID == "" {
+		http.Error(w, "to and message_id required", http.StatusBadRequest)
+		return
+	}
+	if !s.requireConnection(w) {
+		return
+	}
+
+	if err := s.wa.RevokeMessage(r.Context(), req.To, req.MessageID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true, "to": req.To, "message_id": req.MessageID})
+}
+
 // sendCall initiates an outbound WhatsApp call (ring the user).
 func (s *Server) sendCall(w http.ResponseWriter, r *http.Request) {
 	var req callRequest

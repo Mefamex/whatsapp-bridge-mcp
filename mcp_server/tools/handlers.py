@@ -274,11 +274,53 @@ class AskQuickHandler(ToolHandler):
             return self._handle_generic_error(e)
 
 
+class ReactionHandler(ToolHandler):
+    """Add or remove an emoji reaction on a message."""
+
+    async def handle(self, arguments: Dict[str, Any]) -> CallToolResult:
+        try:
+            result = await self.api.post(
+                "/reaction",
+                {
+                    "to": arguments["to"],
+                    "message_id": arguments["message_id"],
+                    "emoji": arguments.get("emoji", ""),
+                    "sender_jid": arguments.get("sender_jid", ""),
+                },
+            )
+            return self._success(result)
+        except APIError as e:
+            return self._handle_api_error(e)
+        except Exception as e:
+            return self._handle_generic_error(e)
+
+
+class RevokeHandler(ToolHandler):
+    """Delete a previously sent message for everyone."""
+
+    async def handle(self, arguments: Dict[str, Any]) -> CallToolResult:
+        try:
+            result = await self.api.post(
+                "/revoke",
+                {
+                    "to": arguments["to"],
+                    "message_id": arguments["message_id"],
+                },
+            )
+            return self._success(result)
+        except APIError as e:
+            return self._handle_api_error(e)
+        except Exception as e:
+            return self._handle_generic_error(e)
+
+
 # Handler registry
 HANDLERS = {
     "whatsapp_send": SendHandler,
     "whatsapp_send_media": SendMediaHandler,
     "whatsapp_send_poll": SendPollHandler,
+    "whatsapp_reaction": ReactionHandler,
+    "whatsapp_revoke": RevokeHandler,
     "whatsapp_get_contacts": GetContactsHandler,
     "whatsapp_get_groups": GetGroupsHandler,
     "whatsapp_get_messages": GetMessagesHandler,

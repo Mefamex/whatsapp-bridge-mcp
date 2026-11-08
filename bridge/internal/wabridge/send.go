@@ -46,6 +46,48 @@ func (s *Service) SendText(ctx context.Context, to, text string) (string, error)
 	return target.String(), nil
 }
 
+// SendReaction adds or removes an emoji reaction on a message.
+func (s *Service) SendReaction(ctx context.Context, to, targetID, emoji, senderJID string) error {
+	target, err := s.resolveTarget(ctx, to)
+	if err != nil {
+		return err
+	}
+
+	sender := target
+	if senderJID != "" {
+		if resolvedSender, err := s.resolveTarget(ctx, senderJID); err == nil {
+			sender = resolvedSender
+		}
+	} else if s.messages != nil {
+		// Mesaj bellekte varsa göndereni otomatik tespit et
+		if msg, ok := s.messages.ByID(targetID); ok {
+			if msg.Direction == "out" && s.client != nil && s.client.Store != nil && s.client.Store.ID != nil {
+				sender = s.client.Store.ID.ToNonAD()
+			} else if msg.Sender != "" {
+				if parsed, err := types.ParseJID(msg.Sender); err == nil {
+					sender = parsed
+				}
+			}
+		}
+	}
+
+	msg := s.client.BuildReaction(target, sender, types.MessageID(targetID), emoji)
+	_, err = s.client.SendMessage(ctx, target, msg)
+	return err
+}
+
+// RevokeMessage unsends (deletes for everyone) an outgoing message.
+func (s *Service) RevokeMessage(ctx context.Context, to, targetID string) error {
+	target, err := s.resolveTarget(ctx, to)
+	if err != nil {
+		return err
+	}
+
+	msg := s.client.BuildRevoke(target, types.EmptyJID, types.MessageID(targetID))
+	_, err = s.client.SendMessage(ctx, target, msg)
+	return err
+}
+
 // resolveTarget turns a caller-supplied address into a JID WhatsApp will
 // actually deliver to.
 func (s *Service) resolveTarget(ctx context.Context, to string) (types.JID, error) {

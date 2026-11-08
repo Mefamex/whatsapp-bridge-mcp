@@ -180,22 +180,29 @@ TOOLS = [
         },
     ),
     Tool(
-        name="whatsapp_ask_quick",
-        description="Send a multiple-choice quick question to a WhatsApp contact and return immediately. The user's response can be retrieved later with whatsapp_get_messages.",
+        name="whatsapp_reaction",
+        description="Add or remove an emoji reaction on a WhatsApp message. Send empty string to remove reaction.",
         inputSchema={
             "type": "object",
             "properties": {
-                "to": {"type": "string", "description": "Phone number or JID"},
-                "question": {"type": "string", "description": "Question to ask"},
-                "options": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": "2-5 answer options",
-                    "minItems": 2,
-                    "maxItems": 5,
-                },
+                "to": {"type": "string", "description": "Phone number or JID of the chat"},
+                "message_id": {"type": "string", "description": "Target WhatsApp message ID to react to"},
+                "emoji": {"type": "string", "description": "Single emoji character (e.g. 👍, ❤️, 🔥, 🚀) or empty string to remove"},
+                "sender_jid": {"type": "string", "description": "Optional JID of original message sender if in a group"},
             },
-            "required": ["to", "question", "options"],
+            "required": ["to", "message_id", "emoji"],
+        },
+    ),
+    Tool(
+        name="whatsapp_revoke",
+        description="Delete a previously sent message for everyone (unsend message).",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "to": {"type": "string", "description": "Phone number or JID of the chat"},
+                "message_id": {"type": "string", "description": "Message ID of the message to revoke/delete"},
+            },
+            "required": ["to", "message_id"],
         },
     ),
 ]
