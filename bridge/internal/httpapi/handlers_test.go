@@ -53,14 +53,14 @@ func (f *fakeWA) SendText(_ context.Context, to, text string) (string, error) {
 		return "", f.sendErr
 	}
 	f.lastTo, f.lastText = to, text
-	return "905551234567@s.whatsapp.net", nil
+	return "905451483283@s.whatsapp.net", nil
 }
 
 func (f *fakeWA) SendMedia(_ context.Context, _ wabridge.MediaRequest) (string, string, error) {
 	if f.mediaErr != nil {
 		return "", "", f.mediaErr
 	}
-	return "905551234567@s.whatsapp.net", "dp", nil
+	return "905451483283@s.whatsapp.net", "dp", nil
 }
 
 func (f *fakeWA) SendPoll(_ context.Context, req wabridge.PollRequest) (string, error) {
@@ -68,7 +68,7 @@ func (f *fakeWA) SendPoll(_ context.Context, req wabridge.PollRequest) (string, 
 		return "", f.sendErr
 	}
 	f.lastTo, f.lastText = req.To, req.Name
-	return "905551234567@s.whatsapp.net", nil
+	return "905451483283@s.whatsapp.net", nil
 }
 
 func (f *fakeWA) SendCall(_ context.Context, to string, _ int) error {
@@ -177,7 +177,7 @@ func TestSendTextRejectsMalformedJSON(t *testing.T) {
 func TestSendTextRequiresToAndText(t *testing.T) {
 	srv := newServer(&fakeWA{loggedIn: true, connected: true}, nil)
 
-	for _, body := range []string{`{"to":"","text":"x"}`, `{"to":"905551234567","text":""}`} {
+	for _, body := range []string{`{"to":"","text":"x"}`, `{"to":"905451483283","text":""}`} {
 		rec := httptest.NewRecorder()
 		srv.sendText(rec, httptest.NewRequest(http.MethodPost, "/send", bytes.NewBufferString(body)))
 		if rec.Code != http.StatusBadRequest {
@@ -190,7 +190,7 @@ func TestSendTextRequiresLiveConnection(t *testing.T) {
 	rec := httptest.NewRecorder()
 	srv := newServer(&fakeWA{loggedIn: true}, nil)
 	srv.sendText(rec, httptest.NewRequest(http.MethodPost, "/send",
-		bytes.NewBufferString(`{"to":"905551234567","text":"hi"}`)))
+		bytes.NewBufferString(`{"to":"905451483283","text":"hi"}`)))
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("status = %d, want 503", rec.Code)
@@ -202,7 +202,7 @@ func TestSendTextSuccessPassesThroughPayload(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	newServer(wa, nil).sendText(rec, httptest.NewRequest(http.MethodPost, "/send",
-		bytes.NewBufferString(`{"to":"905551234567","text":"hello"}`)))
+		bytes.NewBufferString(`{"to":"905451483283","text":"hello"}`)))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body)
@@ -210,7 +210,7 @@ func TestSendTextSuccessPassesThroughPayload(t *testing.T) {
 	if wa.lastText != "hello" {
 		t.Errorf("sent text = %q, want hello", wa.lastText)
 	}
-	if !strings.Contains(rec.Body.String(), "905551234567@s.whatsapp.net") {
+	if !strings.Contains(rec.Body.String(), "905451483283@s.whatsapp.net") {
 		t.Errorf("body = %s, want resolved JID", rec.Body)
 	}
 }
@@ -220,7 +220,7 @@ func TestSendTextSurfacesUpstreamError(t *testing.T) {
 	srv := newServer(&fakeWA{loggedIn: true, connected: true, sendErr: errors.New("boom")}, nil)
 
 	srv.sendText(rec, httptest.NewRequest(http.MethodPost, "/send",
-		bytes.NewBufferString(`{"to":"905551234567","text":"hi"}`)))
+		bytes.NewBufferString(`{"to":"905451483283","text":"hi"}`)))
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Errorf("status = %d, want 500", rec.Code)
@@ -232,7 +232,7 @@ func TestSendMediaRejectsInvalidBase64(t *testing.T) {
 	srv := newServer(&fakeWA{loggedIn: true, connected: true}, nil)
 
 	srv.sendMedia(rec, httptest.NewRequest(http.MethodPost, "/send-media",
-		bytes.NewBufferString(`{"to":"905551234567","media_base64":"!!!","mime_type":"image/jpeg"}`)))
+		bytes.NewBufferString(`{"to":"905451483283","media_base64":"!!!","mime_type":"image/jpeg"}`)))
 
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("status = %d, want 400", rec.Code)
@@ -244,8 +244,8 @@ func TestSendMediaRequiresFields(t *testing.T) {
 
 	for _, body := range []string{
 		`{"to":"","media_base64":"aGk=","mime_type":"image/jpeg"}`,
-		`{"to":"905551234567","media_base64":"","mime_type":"image/jpeg"}`,
-		`{"to":"905551234567","media_base64":"aGk=","mime_type":""}`,
+		`{"to":"905451483283","media_base64":"","mime_type":"image/jpeg"}`,
+		`{"to":"905451483283","media_base64":"aGk=","mime_type":""}`,
 	} {
 		rec := httptest.NewRecorder()
 		srv.sendMedia(rec, httptest.NewRequest(http.MethodPost, "/send-media", bytes.NewBufferString(body)))
@@ -383,14 +383,14 @@ func TestMediaDownloadMessageWithoutMediaIs400(t *testing.T) {
 func TestMessagesHandlerServesBuffer(t *testing.T) {
 	store := msgstore.New(10)
 	store.Add(msgstore.Message{
-		ID: "M1", From: "905551234567@s.whatsapp.net",
-		Sender: "905551234567@s.whatsapp.net", Text: "selam",
+		ID: "M1", From: "905451483283@s.whatsapp.net",
+		Sender: "905451483283@s.whatsapp.net", Text: "selam",
 	})
 
 	wa := &fakeWA{loggedIn: true, connected: true}
 	rec := httptest.NewRecorder()
 	srv := newServer(wa, store)
-	srv.routerVars(rec, "/messages/905551234567?count=1", map[string]string{"jid": "905551234567"}, srv.messagesHandler)
+	srv.routerVars(rec, "/messages/905451483283?count=1", map[string]string{"jid": "905451483283"}, srv.messagesHandler)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body)
@@ -407,7 +407,7 @@ func TestMessagesHandlerTopsUpFromWhatsApp(t *testing.T) {
 	wa := &fakeWA{loggedIn: true, connected: true}
 	rec := httptest.NewRecorder()
 	srv := newServer(wa, msgstore.New(10))
-	srv.routerVars(rec, "/messages/905551234567?count=5", map[string]string{"jid": "905551234567"}, srv.messagesHandler)
+	srv.routerVars(rec, "/messages/905451483283?count=5", map[string]string{"jid": "905451483283"}, srv.messagesHandler)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
@@ -427,7 +427,7 @@ func TestRouterRegistersEveryDocumentedRoute(t *testing.T) {
 		{http.MethodGet, "/contacts"},
 		{http.MethodGet, "/groups"},
 		{http.MethodPost, "/mark-read"},
-		{http.MethodGet, "/messages/905551234567@s.whatsapp.net"},
+		{http.MethodGet, "/messages/905451483283@s.whatsapp.net"},
 		{http.MethodGet, "/media/ABC123"},
 		{http.MethodGet, "/events"},
 		{http.MethodPost, "/webhook"},
@@ -454,9 +454,9 @@ func TestSendPollRequiresValidPayload(t *testing.T) {
 		name string
 		body string
 	}{
-		{"bos ad", `{"to":"905551234567","name":"","options":["a","b"]}`},
-		{"tek secenek", `{"to":"905551234567","name":"x","options":["a"]}`},
-		{"seceneksiz", `{"to":"905551234567","name":"x","options":[]}`},
+		{"bos ad", `{"to":"905451483283","name":"","options":["a","b"]}`},
+		{"tek secenek", `{"to":"905451483283","name":"x","options":["a"]}`},
+		{"seceneksiz", `{"to":"905451483283","name":"x","options":[]}`},
 		{"hedefsiz", `{"name":"x","options":["a","b"]}`},
 	}
 
@@ -480,7 +480,7 @@ func TestSendPollSuccessPassesThroughPayload(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	newServer(wa, nil).sendPoll(rec, httptest.NewRequest(http.MethodPost, "/send-poll",
-		bytes.NewBufferString(`{"to":"905551234567","name":"pıttık mı?","options":["pıttık1","pıttık2"]}`)))
+		bytes.NewBufferString(`{"to":"905451483283","name":"pıttık mı?","options":["pıttık1","pıttık2"]}`)))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body)
@@ -495,7 +495,7 @@ func TestSendPollRequiresLiveConnection(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	newServer(wa, nil).sendPoll(rec, httptest.NewRequest(http.MethodPost, "/send-poll",
-		bytes.NewBufferString(`{"to":"905551234567","name":"x","options":["a","b"]}`)))
+		bytes.NewBufferString(`{"to":"905451483283","name":"x","options":["a","b"]}`)))
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("status = %d, want 503", rec.Code)
@@ -519,12 +519,12 @@ func TestSendCallSuccessPassesThrough(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	newServer(wa, nil).sendCall(rec, httptest.NewRequest(http.MethodPost, "/call",
-		bytes.NewBufferString(`{"to":"905551234567","duration_sec":10}`)))
+		bytes.NewBufferString(`{"to":"905451483283","duration_sec":10}`)))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200: %s", rec.Code, rec.Body)
 	}
-	if wa.lastTo != "905551234567" {
+	if wa.lastTo != "905451483283" {
 		t.Errorf("sent to = %q, want hedef", wa.lastTo)
 	}
 }
@@ -534,7 +534,7 @@ func TestSendCallRequiresLiveConnection(t *testing.T) {
 	rec := httptest.NewRecorder()
 
 	newServer(wa, nil).sendCall(rec, httptest.NewRequest(http.MethodPost, "/call",
-		bytes.NewBufferString(`{"to":"905551234567","duration_sec":10}`)))
+		bytes.NewBufferString(`{"to":"905451483283","duration_sec":10}`)))
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("status = %d, want 503", rec.Code)

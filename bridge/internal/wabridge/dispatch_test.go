@@ -223,10 +223,10 @@ func TestDispatch_NonCallEventNoCall(t *testing.T) {
 func TestLidTelefonuNilClientGuvenli(t *testing.T) {
 	// İstemci/store yokken çökmemeli, "" dönmeli (test servisinde client nil).
 	svc, _ := newTestService()
-	if got := svc.lidTelefonu("12345678901234@lid"); got != "" {
+	if got := svc.lidTelefonu("47575939964948@lid"); got != "" {
 		t.Errorf("lidTelefonu(nil client) = %q, want \"\"", got)
 	}
-	if got := svc.lidTelefonu("905551234567@s.whatsapp.net"); got != "" {
+	if got := svc.lidTelefonu("905451483283@s.whatsapp.net"); got != "" {
 		t.Errorf("lidTelefonu(non-LID) = %q, want \"\"", got)
 	}
 	if got := svc.lidTelefonu("bozuk"); got != "" {
@@ -301,7 +301,7 @@ func TestHandleMessageLidTakmaAdEklenir(t *testing.T) {
 	// Eşleşme varsa: gelen LID mesajın TakmaAd'ında telefon görünmeli,
 	// From değişmemeli.
 	lid := types.JID{User: "47575939964948", Server: types.HiddenUserServer}
-	pn := types.JID{User: "905551234567", Server: types.DefaultUserServer}
+	pn := types.JID{User: "905451483283", Server: types.DefaultUserServer}
 
 	svc := &Service{
 		bus:      eventbus.New(),

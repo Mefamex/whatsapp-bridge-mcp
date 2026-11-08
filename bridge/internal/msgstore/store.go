@@ -44,7 +44,7 @@ type Message struct {
 	// TakmaAd, bu mesajın AYRICA ait olduğu kimlikler.
 	//
 	// NEDEN VAR (2026-10-06 canlı ölçümü): bir sohbet iki kimlikle
-	// bilinebilir — gelen mesaj `12345678901234@lid` ile gelir, giden
+	// bilinebilir — gelen mesaj `47575939964948@lid` ile gelir, giden
 	// mesaj ise çözülmüş `905…@s.whatsapp.net` olarak kaydedilir. Tam
 	// eşleşme arayan store, LID'li görünümde giden mesajları GÖRMEDİ.
 	//

@@ -178,7 +178,7 @@ func TestClassifyStillHandlesTheKnownTypes(t *testing.T) {
 
 func TestTranslateExtractsQuotedMessage(t *testing.T) {
 	stanza := "ORIG123"
-	sender := "905551234567@s.whatsapp.net"
+	sender := "905451483283@s.whatsapp.net"
 	quotedText := "Önceki soru metni"
 
 	extMsg := &waE2E.ExtendedTextMessage{
@@ -195,7 +195,7 @@ func TestTranslateExtractsQuotedMessage(t *testing.T) {
 	evt := &events.Message{
 		Info: types.MessageInfo{
 			ID:   "MSG456",
-			Chat: types.JID{User: "905551234567", Server: "s.whatsapp.net"},
+			Chat: types.JID{User: "905451483283", Server: "s.whatsapp.net"},
 		},
 		Message: &waE2E.Message{
 			ExtendedTextMessage: extMsg,

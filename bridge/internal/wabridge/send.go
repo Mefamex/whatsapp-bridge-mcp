@@ -189,7 +189,7 @@ func (s *Service) recordOwnAdi(target types.JID, istendi string, resp whatsmeow.
 	// recordOwnAliasNotu
 	//
 	// ÖLÇÜM (2026-10-06, canlı): LID'li bir sohbette köprüye
-	// `12345678901234@lid` diye sorulduğu HALDE /messages o kimlikte 0
+	// `47575939964948@lid` diye sorulduğu HALDE /messages o kimlikte 0
 	// mesaj döndürüyordu; aynı mesajlar `905…@s.whatsapp.net` altta duruyordu.
 	//
 	// Sebep: giden mesajın From alanı ÇÖZÜLMÜŞ kimlikle yazılıyor, gelen

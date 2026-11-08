@@ -17,7 +17,7 @@ func TestMapToNodeRejectsMissingTag(t *testing.T) {
 func TestMapToNodeBuildsTagAttrs(t *testing.T) {
 	node := MapToNode(map[string]any{
 		"tag":   "iq",
-		"attrs": map[string]any{"id": "1", "to": "905551234567@s.whatsapp.net"},
+		"attrs": map[string]any{"id": "1", "to": "905451483283@s.whatsapp.net"},
 	})
 
 	if node == nil || node.Tag != "iq" {

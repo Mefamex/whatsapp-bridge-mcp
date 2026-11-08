@@ -50,12 +50,12 @@ func cevap(t *testing.T, rec *httptest.ResponseRecorder) map[string]any {
 func TestMuteSustururVeSuresiGider(t *testing.T) {
 	wa := &fakeWA{connected: true}
 	rec := istek(t, newServer(wa, nil).mute,
-		`{"jid":"905551234567@s.whatsapp.net","muted":true,"for":"8h"}`)
+		`{"jid":"905451483283@s.whatsapp.net","muted":true,"for":"8h"}`)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("kod = %d: %s", rec.Code, rec.Body.String())
 	}
-	if wa.muteJID != "905551234567@s.whatsapp.net" {
+	if wa.muteJID != "905451483283@s.whatsapp.net" {
 		t.Errorf("jid = %q", wa.muteJID)
 	}
 	if !wa.muteMuted {
@@ -275,12 +275,12 @@ func TestStarBaglantiYoksa503(t *testing.T) {
 func TestStarGonderenKimligiTasir(t *testing.T) {
 	wa := &fakeWA{connected: true}
 	rec := istek(t, newServer(wa, nil).star,
-		`{"jid":"12345678901234@lid","message_id":"M1","sender":"12345678901234@lid","starred":true,"from_me":true}`)
+		`{"jid":"47575939964948@lid","message_id":"M1","sender":"47575939964948@lid","starred":true,"from_me":true}`)
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("kod = %d", rec.Code)
 	}
-	if wa.starSender != "12345678901234@lid" {
+	if wa.starSender != "47575939964948@lid" {
 		t.Errorf("sender = %q", wa.starSender)
 	}
 	if !wa.fromMe {
@@ -322,21 +322,21 @@ func TestChatStateOkunurDurumuDoner(t *testing.T) {
 
 // YANIT KANONİK KİMLİĞİ YANKILAMALI, ham girdiyi değil.
 //
-// Canlı denemede görüldü: istek "?jid=905551234567" idi, yanıt da
-// "jid":"905551234567" diyordu — oysa durum "905551234567@s.whatsapp.net"
+// Canlı denemede görüldü: istek "?jid=905451483283" idi, yanıt da
+// "jid":"905451483283" diyordu — oysa durum "905451483283@s.whatsapp.net"
 // üzerinden okunmuştu. Bir kanıt endpoint'i başka sohbeti gösterip kendi
 // girdisini yankılarsa, kanıt hangi sohbete ait belirsizdir.
 func TestChatStateKanonikJidYankilar(t *testing.T) {
 	wa := &fakeWA{connected: true, chatState: wabridge.ChatState{
-		JID: "905551234567@s.whatsapp.net",
+		JID: "905451483283@s.whatsapp.net",
 	}}
 	srv := newServer(wa, nil)
 	rec := httptest.NewRecorder()
 	// Sunucusuz kimlik: köprü @s.whatsapp.net ekler.
-	srv.chatState(rec, httptest.NewRequest(http.MethodGet, "/chat-state?jid=905551234567", nil))
+	srv.chatState(rec, httptest.NewRequest(http.MethodGet, "/chat-state?jid=905451483283", nil))
 
 	got, _ := cevap(t, rec)["jid"].(string)
-	if got != "905551234567@s.whatsapp.net" {
+	if got != "905451483283@s.whatsapp.net" {
 		t.Errorf("jid = %q, want kanonik biçim", got)
 	}
 }

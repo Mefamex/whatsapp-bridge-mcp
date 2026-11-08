@@ -42,9 +42,9 @@ func TestRecentReturnsNewestFirstAndFiltersByChat(t *testing.T) {
 
 func TestRecentMatchesOnSenderJID(t *testing.T) {
 	s := New(10)
-	s.Add(msg("1", "group@g.us", "905551234567@s.whatsapp.net", 1))
+	s.Add(msg("1", "group@g.us", "905451483283@s.whatsapp.net", 1))
 
-	if got := s.Recent("905551234567@s.whatsapp.net", 10); len(got) != 1 {
+	if got := s.Recent("905451483283@s.whatsapp.net", 10); len(got) != 1 {
 		t.Fatalf("len = %d, want 1 (sender match)", len(got))
 	}
 }

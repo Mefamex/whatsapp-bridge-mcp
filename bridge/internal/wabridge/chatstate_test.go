@@ -45,7 +45,7 @@ func TestMuteChatGecersizJidIstemciyeGitmez(t *testing.T) {
 func TestMuteChatKaliciSureBirYilaCevrilir(t *testing.T) {
 	s := &Service{}
 
-	err := s.MuteChat(context.Background(), "12345678901234@lid", true, 0)
+	err := s.MuteChat(context.Background(), "47575939964948@lid", true, 0)
 	if !errors.Is(err, errClientNil) {
 		t.Errorf("istemciye ulaşılmadı (hata = %v); kalıcı süre reddedildi", err)
 	}
@@ -57,7 +57,7 @@ func TestStarMessageKimliksizIstemciyeGitmez(t *testing.T) {
 	s := &Service{}
 
 	for _, bos := range []string{"", "   ", "\t"} {
-		err := s.StarMessage(context.Background(), "12345678901234@lid", "", bos, false, true)
+		err := s.StarMessage(context.Background(), "47575939964948@lid", "", bos, false, true)
 		if !errors.Is(err, errMessageIDRequired) {
 			t.Errorf("message_id=%q için hata = %v, want %q", bos, err, errMessageIDRequired)
 		}
@@ -70,7 +70,7 @@ func TestStarMessageKimliksizIstemciyeGitmez(t *testing.T) {
 func TestStarMessageBosGonderenHedefeDuser(t *testing.T) {
 	s := &Service{}
 
-	err := s.StarMessage(context.Background(), "12345678901234@lid", "", "M1", false, true)
+	err := s.StarMessage(context.Background(), "47575939964948@lid", "", "M1", false, true)
 	if !errors.Is(err, errClientNil) {
 		t.Errorf("istemciye ulaşılmadı (hata = %v); boş gönderen hedefe düşmüyor", err)
 	}
