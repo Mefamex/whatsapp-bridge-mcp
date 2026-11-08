@@ -79,6 +79,23 @@ func (f *fakeWA) SendCall(_ context.Context, to string, _ int) error {
 	return nil
 }
 
+func (f *fakeWA) SendReaction(_ context.Context, to, targetID, emoji, _ string) error {
+	if f.sendErr != nil {
+		return f.sendErr
+	}
+	f.lastTo = to
+	f.lastText = emoji
+	return nil
+}
+
+func (f *fakeWA) RevokeMessage(_ context.Context, to, _ string) error {
+	if f.sendErr != nil {
+		return f.sendErr
+	}
+	f.lastTo = to
+	return nil
+}
+
 func (f *fakeWA) Contacts(context.Context) ([]wabridge.Contact, error) {
 	return []wabridge.Contact{{JID: "a@s.whatsapp.net", Name: "A"}}, nil
 }
@@ -521,5 +538,50 @@ func TestSendCallRequiresLiveConnection(t *testing.T) {
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Errorf("status = %d, want 503", rec.Code)
+	}
+}
+
+func TestSendReaction(t *testing.T) {
+	wa := &fakeWA{loggedIn: true, connected: true}
+	srv := newServer(wa, nil)
+
+	// Hatalı gövde: to veya message_id eksik
+	for _, body := range []string{`{"to":"","message_id":"1"}`, `{"to":"123","message_id":""}`} {
+		rec := httptest.NewRecorder()
+		srv.sendReaction(rec, httptest.NewRequest(http.MethodPost, "/reaction", bytes.NewBufferString(body)))
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("expected 400 for %s, got %d", body, rec.Code)
+		}
+	}
+
+	// Başarılı reaksiyon
+	rec := httptest.NewRecorder()
+	srv.sendReaction(rec, httptest.NewRequest(http.MethodPost, "/reaction",
+		bytes.NewBufferString(`{"to":"905551234567","message_id":"MSG123","emoji":"👍"}`)))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	if wa.lastText != "👍" {
+		t.Errorf("expected emoji 👍, got %s", wa.lastText)
+	}
+}
+
+func TestRevokeMessage(t *testing.T) {
+	wa := &fakeWA{loggedIn: true, connected: true}
+	srv := newServer(wa, nil)
+
+	// Hatalı gövde
+	rec := httptest.NewRecorder()
+	srv.revokeMessage(rec, httptest.NewRequest(http.MethodPost, "/revoke", bytes.NewBufferString(`{"to":""}`)))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	// Başarılı geri çekme
+	rec = httptest.NewRecorder()
+	srv.revokeMessage(rec, httptest.NewRequest(http.MethodPost, "/revoke",
+		bytes.NewBufferString(`{"to":"905551234567","message_id":"MSG123"}`)))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
 }
