@@ -133,6 +133,45 @@ func (s *Server) sendPoll(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, map[string]any{"ok": true, "to": jid})
 }
 
+type pollVoteRequest struct {
+	To      string   `json:"to"`
+	PollID  string   `json:"poll_id"`
+	Options []string `json:"options"`
+}
+
+func (s *Server) sendPollVote(w http.ResponseWriter, r *http.Request) {
+	var req pollVoteRequest
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.To == "" {
+		http.Error(w, "to required", http.StatusBadRequest)
+		return
+	}
+	if req.PollID == "" {
+		http.Error(w, "poll_id required", http.StatusBadRequest)
+		return
+	}
+	if len(req.Options) == 0 {
+		http.Error(w, "at least one option required", http.StatusBadRequest)
+		return
+	}
+	if !s.requireConnection(w) {
+		return
+	}
+
+	jid, err := s.wa.SendPollVote(r.Context(), wabridge.PollVoteRequest{
+		To:      req.To,
+		PollID:  req.PollID,
+		Options: req.Options,
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	writeJSON(w, map[string]any{"ok": true, "to": jid, "options": req.Options})
+}
+
 // reactionRequest is the /reaction payload.
 type reactionRequest struct {
 	To        string `json:"to"`

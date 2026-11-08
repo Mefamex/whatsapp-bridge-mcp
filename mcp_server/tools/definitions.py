@@ -71,6 +71,23 @@ TOOLS = [
         },
     ),
     Tool(
+        name="whatsapp_vote_poll",
+        description="Cast a vote on an existing WhatsApp poll message",
+        inputSchema={
+            "type": "object",
+            "properties": {
+                "to": {"type": "string", "description": "Phone number or JID of the chat where the poll was sent"},
+                "poll_id": {"type": "string", "description": "Message ID of the poll message to vote on"},
+                "options": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "List of option names to select (e.g. ['evet'])",
+                },
+            },
+            "required": ["to", "poll_id", "options"],
+        },
+    ),
+    Tool(
         name="whatsapp_get_contacts",
         description="Get all WhatsApp contacts",
         inputSchema={"type": "object", "properties": {}},

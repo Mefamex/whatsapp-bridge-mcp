@@ -98,6 +98,26 @@ class SendPollHandler(ToolHandler):
             return self._handle_generic_error(e)
 
 
+class VotePollHandler(ToolHandler):
+    """Cast a vote on an existing poll."""
+
+    async def handle(self, arguments: Dict[str, Any]) -> CallToolResult:
+        try:
+            result = await self.api.post(
+                "/poll-vote",
+                {
+                    "to": arguments["to"],
+                    "poll_id": arguments["poll_id"],
+                    "options": arguments["options"],
+                },
+            )
+            return self._success(result)
+        except APIError as e:
+            return self._handle_api_error(e)
+        except Exception as e:
+            return self._handle_generic_error(e)
+
+
 class GetContactsHandler(ToolHandler):
     async def handle(self, arguments: Dict[str, Any]) -> CallToolResult:
         try:
@@ -358,6 +378,7 @@ HANDLERS = {
     "whatsapp_send": SendHandler,
     "whatsapp_send_media": SendMediaHandler,
     "whatsapp_send_poll": SendPollHandler,
+    "whatsapp_vote_poll": VotePollHandler,
     "whatsapp_send_location": SendLocationHandler,
     "whatsapp_send_contact": SendContactHandler,
     "whatsapp_reaction": ReactionHandler,

@@ -9,7 +9,9 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
+	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 
 	"whatsapp-bridge/internal/msgstore"
@@ -54,6 +56,70 @@ func (s *Service) SendPoll(ctx context.Context, req PollRequest) (string, error)
 
 	metin := renderPoll(strings.TrimSpace(req.Name), secenekler)
 	s.recordOwnAdi(target, req.To, resp, "poll", metin, nil)
+	return target.String(), nil
+}
+
+// PollVoteRequest describes an outbound vote on an existing poll.
+type PollVoteRequest struct {
+	To      string
+	PollID  string
+	Options []string
+}
+
+// SendPollVote casts a vote on an existing poll.
+func (s *Service) SendPollVote(ctx context.Context, req PollVoteRequest) (string, error) {
+	if strings.TrimSpace(req.To) == "" {
+		return "", fmt.Errorf("to required")
+	}
+	if strings.TrimSpace(req.PollID) == "" {
+		return "", fmt.Errorf("poll_id required")
+	}
+	if len(req.Options) == 0 {
+		return "", fmt.Errorf("at least one option required")
+	}
+
+	target, err := s.resolveTarget(ctx, req.To)
+	if err != nil {
+		return "", err
+	}
+
+	sender := target
+	isFromMe := false
+	if s.messages != nil {
+		if orig, ok := s.messages.ByID(req.PollID); ok {
+			if orig.IsFromMe {
+				isFromMe = true
+				if s.client.Store != nil && s.client.Store.ID != nil {
+					sender = s.client.Store.ID.ToNonAD()
+				}
+			} else if orig.Sender != "" {
+				if sJID, err := types.ParseJID(orig.Sender); err == nil {
+					sender = sJID
+				}
+			}
+		}
+	}
+
+	pollInfo := &types.MessageInfo{
+		ID:        types.MessageID(req.PollID),
+		Chat:      target,
+		Sender:    sender,
+		IsFromMe:  isFromMe,
+		Timestamp: time.Now(),
+	}
+
+	voteMsg, err := s.client.BuildPollVote(ctx, pollInfo, req.Options)
+	if err != nil {
+		return "", fmt.Errorf("failed to build poll vote: %w", err)
+	}
+
+	resp, err := s.client.SendMessage(ctx, target, voteMsg)
+	if err != nil {
+		return "", err
+	}
+
+	metin := fmt.Sprintf("🗳️ Oy Kullanıldı: %s", strings.Join(req.Options, ", "))
+	s.recordOwnAdi(target, req.To, resp, "poll_vote", metin, nil)
 	return target.String(), nil
 }
 

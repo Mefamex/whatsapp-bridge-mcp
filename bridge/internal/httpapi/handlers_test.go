@@ -88,6 +88,14 @@ func (f *fakeWA) SendReaction(_ context.Context, to, targetID, emoji, _ string) 
 	return nil
 }
 
+func (f *fakeWA) SendPollVote(_ context.Context, req wabridge.PollVoteRequest) (string, error) {
+	if f.sendErr != nil {
+		return "", f.sendErr
+	}
+	f.lastTo = req.To
+	return req.To, nil
+}
+
 func (f *fakeWA) RevokeMessage(_ context.Context, to, _ string) error {
 	if f.sendErr != nil {
 		return f.sendErr
@@ -637,6 +645,26 @@ func TestSendContact(t *testing.T) {
 	rec = httptest.NewRecorder()
 	srv.sendContact(rec, httptest.NewRequest(http.MethodPost, "/send-contact",
 		bytes.NewBufferString(`{"to":"905551234567","name":"Ahmet Yılmaz","phone":"+905551112233"}`)))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestSendPollVote(t *testing.T) {
+	wa := &fakeWA{loggedIn: true, connected: true}
+	srv := newServer(wa, nil)
+
+	// Hatalı gövde: to veya poll_id eksik
+	rec := httptest.NewRecorder()
+	srv.sendPollVote(rec, httptest.NewRequest(http.MethodPost, "/poll-vote", bytes.NewBufferString(`{"to":""}`)))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", rec.Code)
+	}
+
+	// Başarılı oy kullanımı
+	rec = httptest.NewRecorder()
+	srv.sendPollVote(rec, httptest.NewRequest(http.MethodPost, "/poll-vote",
+		bytes.NewBufferString(`{"to":"905551234567","poll_id":"POLL123","options":["evet"]}`)))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
