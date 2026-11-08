@@ -17,6 +17,39 @@
 
 ## 1. Mimari ve Görsel Önizleme (Architecture & Preview)
 
+### Genel Ekosistem Mimarisi (4 Katmanlı Hibrit Model)
+
+```text
+                               ┌──────────────────────────────────────────────┐
+                               │            WHATSAPP (Mobil / Web)            │
+                               └──────────────────────┬───────────────────────┘
+                                                      │ WebSocket
+                                                      ▼
+                       ┌──────────────────────────────────────────────────────────────┐
+                       │        KATMAN 1: whatsapp-bridge (Whatsmeow / Go)            │
+                       │     - REST API & Gerçek Zamanlı SSE Dinleyici (:31415)       │
+                       └──────────────┬───────────────────────────────┬───────────────┘
+                                      │                               │
+        [İki Yönlü MCP Araçları]      │                               │ [Gelen Olay Akışı (SSE)]
+                                      ▼                               ▼
+       ┌────────────────────────────────────────────┐  ┌─────────────────────────────────────────────┐
+       │     KATMAN 2: whatsapp-mcp (Agent-to-WA)   │  │  KATMAN 3: whatsapp-tetikleyici (Dispatcher)│
+       │  - FastMCP STDIO Sunucusu                  │  │  - Whitelist & RBAC (Telefon & LID)         │
+       │  - Ajanların WhatsApp'ı Kullanması         │  │  - VRAM Tahliyeli Multimodal (Whisper/Qwen) │
+       │  - İnsan Onayı (whatsapp_ask_confirm)      │  └──────────────┬──────────────────────────────┘
+       └────────────────────────────────────────────┘                 │
+                                                      ┌───────────────┴───────────────┐
+                                                      ▼                               ▼
+                                      ┌──────────────────────────────┐ ┌─────────────────────────────┐
+                                      │ KATMAN 4A: whatsapp-to-cmd   │ │ KATMAN 4B: whatsapp-to-agent│
+                                      │   (Doğrudan Sistem Kumandası)│ │     (Ajan & Oturum Tüneli)  │
+                                      │ - /cmd & /cmdhub (Bash Tüneli│ │ - /agent agy|claude|opencode│
+                                      │ - /camera, /ekran, /durum    │ │ - /session go & /reply      │
+                                      └──────────────────────────────┘ └─────────────────────────────┘
+```
+
+### Köprü ve MCP Veri Akışı (Bridge & MCP Detail)
+
 ```text
 ┌───────────────────────┐         ┌────────────────────────┐         ┌─────────────────────────┐
 │   WhatsApp Sunucusu   │ <=====> │  WhatsApp Bridge (Go)  │ <=====> │ WhatsApp MCP (Python)   │
@@ -34,6 +67,65 @@
 
 - **Hafif Bellek İzi:** Go çekirdeği yalnızca ~30 MB RAM tüketir, Node.js veya Chromium gerektirmez.
 - **İki Katmanlı Güven:** MCP istemcisi veya yapay zekâ oturumu çökse bile WhatsApp oturumu Go servisinde kesintisiz devam eder.
+
+### Yükseltmeden Sonra Hedef Mimari (Headless Daemon + Birleşik CLI + Gömülü Web Dashboard)
+
+> **Kritik Yükseltme Hedefi:** Ağır masaüstü pencereleri (Electron/Qt) yerine sistem yükünü ~30 MB RAM seviyesinde tutan, hem headless sunucularda (VPS, Raspberry Pi) hem de yerel masaüstünde sıfır ek yükle çalışan; WhatsApp ("ChatOps"), Birleşik CLI ve yerel Gömülü Web Dashboard'u birleştiren hibrit mimari.
+
+```text
+                               ┌──────────────────────────────────────────────────────────────┐
+                               │               Kullanıcı & Yönetim Arayüzleri                 │
+                               │  ┌──────────────────────┐    ┌─────────────────────────────┐ │
+                               │  │ WhatsApp ("ChatOps") │    │ Yerel Gömülü Web Dashboard  │ │
+                               │  │ /cmd, /camera, /agent│    │ (http://127.0.0.1:31415)    │ │
+                               │  │ Anket, Emoji Tepkiler│    │ [Büyük QR Kod, Metrik, Log] │ │
+                               │  └──────────┬───────────┘    └──────────────┬──────────────┘ │
+                               │             │                               │                │
+                               │             │                ┌──────────────┴──────────────┐ │
+                               │             │                │    Birleşik Yönetim CLI     │ │
+                               │             │                │   `tetikleyici status/qr`   │ │
+                               │             │                └──────────────┬──────────────┘ │
+                               └─────────────┼───────────────────────────────┼────────────────┘
+                                             │ WhatsApp Web                  │ Yerel HTTP /
+                                             │ Soketi (Multi-Device)         │ REST & SSE
+                                             ▼                               ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 1. KÖPRÜ: whatsapp-bridge-mcp (Go Headless Daemon :31415)                                   │
+│  - Whatsmeow Çekirdeği (SQLite WAL whatsmeow.db, ~30 MB RAM)                                │
+│  - Gömülü Web Sunucusu (go:embed Web Dashboard & QR Motoru)                                 │
+│  - HTTP REST API & Gerçek Zamanlı SSE Yayıncısı (/events)                                   │
+│  - FastMCP STDIO Katmanı (AI Ajanları için whatsapp_* Araç Seti)                            │
+└─────────────────────────────────────────────┬───────────────────────────────────────────────┘
+                                              │ Gerçek Zamanlı Olay Akışı (SSE)
+                                              ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 2. DAĞITICI: whatsapp-tetikleyici (Go Headless Daemon)                                      │
+│  - Beyaz Liste & RBAC Yetki Denetimi (Telefon & LID Doğrulama)                              │
+│  - Catch-up Filtresi (Eski/Bayat Mesajların Açılışta Önlenmesi)                             │
+│  - Tünel & Durum Makinesi (/cmdhub Bash Tüneli & /session)                                  │
+│  - Ajan Adaptör Mimarisi (Ortak AgentDriver Arayüzü & Sabit Session ID)                     │
+└───────┬─────────────────────────────┬───────────────────────────────┬───────────────────────┘
+        │                             │                               │
+        ▼ [Sistem Komutları]          ▼ [Multimodal Hatlar]           ▼ [AI Ajan Sürücüleri]
+ ┌──────────────┐              ┌─────────────────────────────┐ ┌─────────────────────────────┐
+ │ Doğrudan CLI │              │   Yerel Çıkarım Boruları    │ │ Sabit Oturumlu AI Adaptörler│
+ │ /cmd, /camera│              │   - Whisper (Ses -> Metin)  │ │ - OpenCode Driver           │
+ │ /ekran, /ping│              │   - Ollama V-LLM (Görsel)   │ │ - AGY Driver (Antigravity)  │
+ │ /zamanla     │              │   (İş bitince VRAM tahliye) │ │ - Claude Driver (Claude CLI)│
+ └──────┬───────┘              └──────────────┬──────────────┘ └──────────────┬──────────────┘
+        │                                     │                               │
+        └─────────────────────────────────────┼───────────────────────────────┘
+                                              │
+                                              ▼
+ ┌────────────────────────────────────────────────────────────────────────────────────────────┐
+ │ Formatlanmış Yanıt & Geri Bildirim                                                         │
+ │ (POST /send, POST /reaction [⏳->✅], POST /poll-vote -> WhatsApp Köprüsü)                │
+ └────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Masaüstü GUI Bağımlılığı Yok:** X11/Wayland gerektirmez, doğrudan Linux VPS veya Raspberry Pi üzerinde çalışabilir.
+- **Sıfır Ekstra Bellek:** Gömülü Web UI doğrudan Go binary içine gömülüdür (`go:embed`), Node.js/Electron gibi fazladan RAM harcamaz.
+- **Tek Noktadan Yönetim:** Tüm sistem `tetikleyici status`, `tetikleyici qr`, `tetikleyici logs` gibi birleşik CLI komutlarıyla terminalden kolayca idare edilir.
 
 ---
 

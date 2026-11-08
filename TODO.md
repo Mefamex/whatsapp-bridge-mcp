@@ -46,25 +46,31 @@
 - [x] **Kullanıcı Oturumuna Bağlama:** `systemctl --user enable --now whatsapp-tetikleyici.service` ile bilgisayar açılışında otomatik başlama aktif edildi.
 - [x] **Canlı Doğrulama:** `systemctl --user status whatsapp-tetikleyici` ile PID 363706 aktif, bağlı ve çalışıyor.
 
-### 7. 🧵 Tek Kalıcı Oturum (Sabit Session ID) — AGY / Claude / OpenCode [SIRADA 🎯]
-**Sorun:** `runAgent` (`tetikleyici/action.go`) agy ve claude için her mesajda `agy -p "<prompt>"` / `claude -p "<prompt>"` çalıştırıyor → her mesaj SIFIR bağlamlı yeni konuşma; önceki mesajı hatırlamıyor. Prompt'a yalnız son birkaç mesaj gömülüyor (bu bir hafıza değil, yama). OpenCode zaten `--session` ile sabit oturuma gidiyor.
+### 7. 🧵 Tek Kalıcı Oturum (Sabit Session ID) ve Ajan Adaptör Mimarisi [SIRADA 🎯]
+**Sorun:**
+1. `runAgent` (`tetikleyici/action.go`) agy ve claude için her mesajda `agy -p "<prompt>"` / `claude -p "<prompt>"` çalıştırıyor → her mesaj SIFIR bağlamlı yeni konuşma; önceki mesajı hatırlamıyor.
+2. `opencode`, `agy` ve `claude` CLI'larının oturum listeleme (`session list`), oturum formatları (`ses_...` vs UUID), bayrakları ve girdi/çıktı yöntemleri tamamen birbirinden farklı. Tek bir fonksiyon içine gömülen `if/else` blokları sürdürülemez hâle geliyor.
 
-**Ölçülen bayraklar (2026-11-08, `--help` çıktısından):**
-- agy: `--conversation <ID>` (belirli konuşmayı sürdür) · `-c/--continue` (en sonuncuyu sürdür)
-- claude: `-r/--resume <session-id>` · `--session-id <uuid>` (ilk oturumu bu kimlikle KUR) · `-c`
-- opencode: `-s/--session <id>` (yoksa oluşturur) — zaten kullanılıyor
+**Ölçülen bayraklar ve farklar (2026-11-08):**
+- **agy:** `--conversation <ID>` (belirli konuşmayı sürdür) · `-c/--continue` (en sonuncuyu sürdür) · oturumlar `~/.gemini/antigravity-cli/` altında tutulur.
+- **claude:** `-r/--resume <session-id>` · `--session-id <uuid>` (ilk oturumu bu kimlikle kur) · `-c` · oturum listesi `~/.claude/projects/` altındadır.
+- **opencode:** `-s/--session <id>` (yoksa oluşturur) · `opencode session list` komutu ile listelenir.
 
-**Tasarım kararı (öneri): motor başına SABİT kimlik, config'de.**
-- [ ] `tetikleyici.yaml` → `sessions:` bloğu: `agy: <conversation-id>`, `claude: <uuid>`, `opencode: ses_…`. Kural başına değil motor başına; `/agent <motor>` değişince o motorun kendi sabit oturumu devreye girer (motorlar arası geçişte bağlam taşınmaz, bilinçli).
-- [ ] `runAgent` agy dalı: `--conversation <id>` ekle. Claude dalı: `--resume <id>`; ilk kurulum için `--session-id <uuid>` (uuid'i tetikleyici üretip config'e/duruma yazar).
-- [ ] Kimlik yoksa: ilk çalıştırmada oluştur, `.tetikleyici/oturumlar.json`'a kaydet, sonrakilerde yeniden kullan (kullanıcı elle config yazmak zorunda kalmasın).
-- [ ] **AÇIK SORU (önce ölç):** agy `-p` çıktısından yeni konuşmanın ID'si nasıl alınır? (`--output-format json` denenecek; alınamıyorsa `--conversation` için ID'yi kullanıcı bir kez verir.)
-- [ ] **Eşzamanlılık:** aynı oturuma iki mesaj aynı anda gelirse çakışır. `oturumKilidiAl` (opencode için var) agy/claude'a da uygulanıyor — doğrula; mesajlar sırayla işlensin.
-- [ ] **Bağlam şişmesi:** tek oturum sonsuz uzar. Eşik (ör. N tur / token) aşılınca otomatik özet + yeni oturum veya `/session yeni` komutu. Yoksa model yavaşlar/pahalanır.
-- [ ] **Prompt sadeleştirme:** oturum hatırladığı için `buildPrompt` içindeki "Son mesajlar" penceresi sabit oturumda gereksiz tekrar — yalnız YENİ mesajı gönder (isteğe bağlı bayrak: `history_in_prompt: false`).
-- [ ] `/session` tünel komutu ile ilişki: tünel = geçici başka oturum, sabit oturum = varsayılan. `/session exit` sabit oturuma döner (bugünkü davranışla uyumlu, doğrula).
-- [ ] Test: aynı oturumda 2 ardışık mesajda ikincisi birincisini hatırlıyor (canlı); restart sonrası da hatırlıyor (canlı).
-- **Risk:** `--dangerously-skip-permissions` ile uzun ömürlü tek oturum = tüm WhatsApp trafiği aynı yetkili bağlamda. Güvenlik notu README'ye yazılacak.
+**Tasarım kararı: Ajan Adaptör (Driver/Provider) Katmanı:**
+- [ ] **Ortak `AgentDriver` Arayüzü:**
+  - `ListSessions()` → `[{id, title, updated_at}]`
+  - `Run(session_id, prompt)` → string reply
+  - `NewSession(prompt)` → `(session_id, reply)`
+- [ ] **Ajan Sürücüleri (`drivers/` veya `agents/`):**
+  - `opencode_driver.go`: `opencode session list` parse eder, `opencode run -s <id>` çağırır.
+  - `agy_driver.go`: `~/.gemini/antigravity-cli/cache/` ve veritabanından oturumları çeker, `--conversation <id>` ile mesaj iletir.
+  - `claude_driver.go`: JSONL kayıtlarından oturumları listeler, `--resume <id>` / `--session-id <uuid>` yönetir.
+- [ ] **Sanal Takma Ad (Alias / Sabit Kimlik):**
+  - `tetikleyici.yaml` içinde `session: "whatsapp-mefamex"` gibi sanal alias desteği.
+  - Adaptör ilgili ajanda bu alias'a denk gelen oturumu yoksa bir kere açıp ID'sini `.tetikleyici/oturumlar.json`'a sabitler; sonraki tüm mesajlar o ID üzerinden akar.
+- [ ] **Eşzamanlılık ve Sıralama:** `oturumKilidiAl` mekanizması tüm ajan sürücülerine genişletilecek; aynı anda gelen WhatsApp mesajları aynı oturumu kilitleyip sırayla işleyecek.
+- [ ] **Bağlam Şişmesi Koruması:** Tek oturum sonsuz uzamaması için token/tur eşiği aşıldığında otomatik arşivleme/özetleme veya `/session yeni` komutu.
+- [ ] **Prompt Temizliği:** Kalıcı oturumda geçmiş mesaj penceresi tekrar tekrar prompt'a gömülmeyecek; yalnız yeni gelen mesaj gönderilecek.
 
 ### 8. 🧹 Eski Monorepo'dan Taşınan Dosyaların PII Taraması ve Pushlanması [BEKLİYOR — sonra]
 Silinen eski `whatsapp-bridge-project` arşivinden kopyalanıp **commit'lenmemiş** duran tek nüsha dosyalar (orijinal silindi, bu kopyalar kaybolmamalı):
@@ -72,6 +78,175 @@ Silinen eski `whatsapp-bridge-project` arşivinden kopyalanıp **commit'lenmemi�
 - [ ] `whatsapp-tetikleyici/tetikleyici.sh` — yönetim betiği. Artık systemd user servisi var; betik hâlâ gerekli mi karar ver (gerekiyorsa servisle uyumlu hâle getir, yoksa sil).
 - [ ] `whatsapp-bridge-mcp/sidecar/` (VoIP sidecar) — **içinde `node_modules/` var, commit'LEME**. `.gitignore`'a `sidecar/node_modules/` ekle; `rsrc-dump.txt` (322 KB) gereksiz olabilir, gözden geçir; `package-lock.json` kalsın. Sidecar ayrı repo mu olmalı, yoksa köprü reposunda mı kalmalı karar ver. Köprü şu an `WASM binary not found` uyarısı veriyor (arama özelliği kapalı).
 - [ ] Taramadan sonra: `grep -rnE "9054|9053|1234563"` ile kalan gerçek kimlik kontrolü, `make test`, commit, push.
+
+### 9. 🛡️ İnteraktif Onay ve İzin Sistemi (Interactive Approval / Permissions) [PLANLANDI]
+- [ ] **Tehlikeli Eylem Koruması:** Ajan veya tetikleyici riskli komutlar (`rm`, `git push --force`, `systemctl`, veri silme vb.) çalıştırmadan önce işlemi durdurur ve admin onayına sunar.
+- [ ] **WhatsApp Anket (Poll) ile Onay:** Köprünün native anket (`whatsapp_send_poll`) yeteneğiyle 4 seçenekli soru gönderilir:
+  1. `[1] Tek seferlik onayla`
+  2. `[2] Reddet`
+  3. `[3] 1 saat boyunca tümünü otomatik onayla`
+  4. `[4] 1 hafta boyunca otomatik onayla`
+- [ ] **Yetki Damgası Saklama:** `.tetikleyici/izinler.json` dosyasında geçici onay süreleri (`auto_approve_until: <timestamp>`) tutulur; süre bitiminde tekrar onay sorma moduna dönülür.
+
+### 10. 📸 `/ekran` Masaüstü Ekran Görüntüsü Alma Komutu [PLANLANDI]
+- [ ] **Masaüstü Görüntüsü Gönderme:** Tıpkı `/camera` gibi çalışan ama monitörün anlık ekran görüntüsünü WhatsApp'a yollayan `/ekran` (veya `/screenshot`) komutu.
+- [ ] **Wayland / KDE Desteği:** Arch Linux KDE Plasma Wayland üzerinde `spectacle -b -n -o /tmp/ekran.png` (veya `grim`) çağrısı ile ekran yakalanır, `whatsapp-bridge` üzerinden resim olarak iletilir.
+- [ ] **Opsiyonel Parametreler:** `/ekran 5` (5 saniye gecikmeli çekim) desteği.
+
+### 11. ⏱️ Yapay Zekâ Destekli Gelişmiş Zamanlayıcı (Agentic Cron / Scheduled Workflows) [PLANLANDI]
+- [ ] **Sabit Metinden Akıllı İş Akışına Geçiş:** Mevcut `/zamanla` yalnız statik metin gönderiyor. AGY / Claude Desktop benzeri "Ajanlı Zamanlanmış İş Akışları" yapısına kavuşturulacak.
+- [ ] **Örnek Komutlar:**
+  - `/zamanla her sabah 08:30 takvimimi, maillerimi ve GitHub bildirimlerimi özetle`
+  - `/zamanla 2 saatte bir sunucu ve servis sağlığını kontrol et, sorun varsa haber ver`
+- [ ] **Arka Plan Çalıştırıcısı:** Zamanı geldiğinde ajanın sabit oturumu tetiklenir, araçları (MCP/CLI) kullanarak araştırmasını yapar ve üretilen çıktıyı WhatsApp'a iletir.
+
+### 12. ⏳ Canlı İlerleme Bildirimi ve Hızlı Tepki Emojisi (Emoji Feedback) [PLANLANDI]
+- [ ] **Yapılandırma Dosyası Desteği (`tepki_emojisi`):**
+  - `tetikleyici.yaml` içinde `tepki_emojisi` bloğu:
+    ```yaml
+    tepki_emojisi:
+      aktif: true
+      isleniyor: "👀" # veya "⏳"
+      basarili: "✅"
+      hatali: "❌"
+    ```
+  - Sadece eşleşen kurallara ve yetkili admin mesajlarına uygulanır (tüm genel WhatsApp gruplarını/sohbetlerini kirletmez).
+- [ ] **Gelen Mesaja Anlık Reaksiyon:**
+  - Admin mesaj attığında tetikleyici mesajı alıp sıraya koyduğu an mesaja otomatik `isleniyor` ("👀" veya "⏳") reaksiyonu bırakır.
+  - İşlem başarıyla bitip cevap gönderildiğinde reaksiyon `basarili` ("✅") yapılır.
+  - Hata oluşursa reaksiyon `hatali` ("❌") yapılır.
+  - Kullanıcı emojiyi config'ten dilediği gibi değiştirebilir ya da `aktif: false` ile tamamen kapatabilir.
+- [ ] **Uzun Süren Görevlerde Durum Güncellemesi:** 10 saniyeden uzun süren analizlerde WhatsApp'a ara aşama durum bildirimleri (*"Araştırılıyor 🔍"*, *"Derleniyor ⚙️"*) gönderilir.
+
+### 13. 🏛️ KRİTİK MİMARİ YÜKSELTMESİ: Headless Daemon + Birleşik CLI + Gömülü Web Dashboard [PLANLANDI]
+> **Stratejik Tasarım Kararı:** Ağır masaüstü pencere uygulamaları (Electron, Qt, Tauri vb.) yerine; sistem yükünü minimumda tutan (~30MB RAM), headless sunucu/VPS/Raspberry Pi uyumlu, güvenlik açığı yaratmayan ve üst düzey kullanım kolaylığı sunan 3 katmanlı hibrit mimariye geçiş.
+
+- [ ] **Katman 1: Headless Daemon (Mevcut Hafif Çekirdek Korunur):**
+  - Go + Whatsmeow köprüsü ve Tetikleyici motoru arka planda `systemd` servisi olarak bağımsız çalışmaya devam eder.
+  - X11/Wayland zorunluluğu yoktur; ekransız sunucularda sıfır konfigürasyonla çalışır.
+- [ ] **Katman 2: Birleşik Yönetim CLI (`tetikleyici` / `wb` CLI):**
+  - Dağınık bash scriptleri yerine tek bir derlenmiş, zengin Go CLI arayüzü:
+    - `tetikleyici status`: Köprü, tetikleyici ve AI ajanlarının canlılık/gecikme durumunu gösterir.
+    - `tetikleyici qr`: Terminal içinde ANSI bloklarıyla WhatsApp eşleme QR kodu üretir.
+    - `tetikleyici logs -f`: Anlık SSE olaylarını ve tünel akışını terminale renkli formatta basar.
+    - `tetikleyici config check`: YAML yapılandırmasını, yetkili numaraları ve kuralları doğrular.
+    - `tetikleyici session list/kill`: Aktif oturumları CLI'dan yönetir.
+- [ ] **Katman 3: Sıfır-Yüklü Gömülü Web Paneli (Go `embed` Web Dashboard):**
+  - Ekstra Node.js veya Electron gerektirmeyen, doğrudan Go ikilisine gömülü (`go:embed`) tek sayfalık hafif web arayüzü (`http://127.0.0.1:31415/dashboard`).
+  - Yalnızca yerel arayüzü (`127.0.0.1`) dinler, harici saldırı yüzeyi oluşturmaz.
+  - **Özellikler:**
+    - Tarayıcı üzerinden tek tıkla büyük ve net QR kod okutma (özellikle ilk kurulum ve mobil tarayıcı kolaylığı).
+    - Canlı servis durum kartları (bellek, CPU, bağlantı durumu, uptime).
+    - Canlı SSE mesaj ve olay akışı paneli.
+    - Yetkili kullanıcı ve kural izinlerinin görsel özeti.
+- [ ] **Katman 4: Asıl Kullanıcı Arayüzü WhatsApp'ın Kendisidir ("ChatOps"):**
+  - Günlük kullanımda masaüstünde ek pencereye ihtiyaç duyulmaz; `/cmd`, `/camera`, `/ekran`, `/agent`, anketler ve emoji reaksiyonlarıyla WhatsApp içi yönetim korunur.
+
+### 14. 📁 Çift Yönlü Dosya ve Belge Transferi (`/get <yol>` ve WhatsApp Dosya Kabulü) [PLANLANDI]
+- [ ] **WhatsApp'tan Telefona Dosya İndirme (`/get <dosya_yolu>`):**
+  - Admin WhatsApp'tan `/get /mnt/DiskD/rapor.pdf` veya `/get config.yaml` yazdığında dosya varlığı ve boyutu (max 50 MB WhatsApp document sınırı) doğrulanır.
+  - MIME türü otomatik tespit edilir (`application/pdf`, `text/plain`, `image/*` vb.).
+  - `whatsapp-bridge` üzerinden `POST /send-file` çağrılarak dosya doğrudan WhatsApp belgesi (`document`) formatında sohbete teslim edilir.
+- [ ] **Telefondan Bilgisayara Dosya Yükleme (Inbound File Handler):**
+  - Admin telefondan bir dosya/script attığında güvenli varsayılan dizine (`~/Downloads/whatsapp-files/` veya aktif ajanın çalışma dizinine) indirilir.
+  - Güvenlik: İndirilen dosyaların çalıştırma yetkisi kaldırılır (`chmod -x`).
+  - Bildirim: WhatsApp'a *"📥 Dosya kaydedildi: `~/Downloads/whatsapp-files/rapor.pdf` (1.4 MB)"* yanıtı verilir.
+  - Oturum tünelindeyse (`/session go`), ajanın bağlamına *"Kullanıcı bu dosyayı diske kaydetti: `<tam_yol>`"* bildirimi düşülür.
+
+### 15. 📂 Ajan Çalışma Dizinini Dinamik Değiştirme (`/root <dizin>`) [PLANLANDI]
+- [ ] **Dinamik Repo / Çalışma Alanı Değişimi:**
+  - Mevcut `/cmdhub cd` yalnız interaktif bash oturumunu etkiliyor. `/root <dizin>` komutu ise aktif kural veya oturumun çalışma dizinini (`cwd` / `workdir`) değiştirir.
+  - Örnek: `/root /mnt/DiskD/SOFTWARE/Github-repos/whatsapp-tetikleyici`.
+  - Dizin doğrulanır; yoksa açıklayıcı hata mesajı döner.
+  - Sonraki tüm `/cmd` çağrıları ve AI ajan çalıştırmaları (`opencode`, `agy`, `claude`) bu yeni kök dizin bağlamında yürütülür.
+  - Parametresiz `/root`: Aktif çalışma dizinini WhatsApp'a raporlar.
+
+### 16. 📋 Wayland / KDE Plasma Sistem Panosu Kontrolü (`/clip`) [PLANLANDI]
+- [ ] **Sistem Panosunu Telefona Çekme (`/clip` / `/pano`):**
+  - Arch Linux KDE Plasma 6 (Wayland) mimarisine uygun olarak `wl-paste -t text/plain` çağrısıyla bilgisayarın panosundaki metin okunur ve WhatsApp'a mesaj olarak iletilir.
+  - Çok uzun panolarda ilk 2000 karakter + kırpma uyarısı uygulanır.
+- [ ] **Telefondan Bilgisayar Panosuna Metin Kopyalama (`/clip <metin>`):**
+  - WhatsApp'tan gelen metin bilgisayar panosuna basılır: `echo -n "<metin>" | wl-copy`.
+  - Telefonda kopyalanan bir token, link veya kod parçasını anında bilgisayarda Ctrl+V yapabilme imkânı sağlar.
+  - Yalnızca `allow_cmd: true` olan admin kullanıcılara açıktır.
+
+### 17. 🪟 Açık Pencereler ve Süreç Denetimi (`/apps` & `/kill`) [PLANLANDI]
+- [ ] **Açık Pencereleri Listeleme (`/apps` / `/pencereler`):**
+  - Wayland / Plasma üzerinde çalışan grafik uygulamalarını veya pencereleri listeler (`qdbus org.kde.KWin /KWin org.kde.KWin.queryWindowInfo` / `kdotool` veya aktif GUI süreçleri).
+  - Format: `1. Google Chrome (PID 12450)`, `2. Cursor (PID 3341)`, `3. Konsole (PID 5512)`.
+- [ ] **Askıda Kalan Süreci Kapatma (`/kill <uygulama_veya_pid>`):**
+  - Yanıt vermeyen uygulamayı uzaktan sonlandırır (`kill -15 <pid>` veya `pkill -f <uygulama>`).
+  - Güvenlik: Kritik sistem servisleri (`systemd`, `dbus`, `wayland`, `whatsapp-bridge`) kara listededir; asla kill edilemez.
+
+### 18. 🎙️ Yerel TTS Sesli Yanıt (Voice-to-Voice: Piper TTS ile WhatsApp `.ogg opus` Sesli Notu) [PLANLANDI]
+- [ ] **Hafif Yerel TTS (Piper):**
+  - CPU'da sıfır VRAM tüketimiyle gerçek zamanlı çalışan yerel `Piper TTS` (Türkçe model: `tr_TR-dfki-medium` vb.) entegrasyonu.
+  - GPU VRAM'i Whisper veya LLM ile çakışmaz, tamamen hafif çalışır.
+- [ ] **WhatsApp Uyumlu Ses Formatı (`.ogg opus` PTT):**
+  - Piper tarafından üretilen `.wav` dosyası `ffmpeg` ile WhatsApp sesli not formatına (`audio/ogg; codecs=opus`) çevrilir.
+  - `whatsapp-bridge`'in `POST /send-file` endpoint'ine `is_voice_note: true` iletilerek karşı tarafta yeşil mikrofonlu gerçek "sesli mesaj" olarak teslim edilir.
+- [ ] **Tetikleme Mantığı:**
+  - Admin sesli not attığında (veya yapılandırmada `sesli_cevap: true` ise / `/tts on`) metin yerine doğrudan sesli not gönderilir.
+
+### 19. 🧠 Ajan Bağlamını Hafifletme ve Sıkıştırma (`/compact` / `/ozet`) [PLANLANDI]
+- [ ] **Oturum Bağlamını Küçültme:**
+  - Uzun süren WhatsApp tünel konuşmalarında token şişmesini ve yavaşlamayı önlemek için WhatsApp'tan `/compact` komutu verilir.
+  - Aktif ajana (`agy`, `claude`, `opencode`) oturumdaki ana kararları ve teknik adımları yoğun bir özet haline getirme talimatı iletilir.
+  - Oturum sıfırlanmadan bağlam hafifletilir; gereksiz tur geçmişi temizlenir.
+- [ ] **Şişme Uyarısı:** Oturum tur sayısı belirlenen eşiği (ör. 25 tur) aştığında tetikleyici WhatsApp'a `"💡 Bağlam penceresi genişledi, /compact önerilir"` ipucu gönderir.
+
+### 20. 🚨 Proaktif Sistem Sağlık Bekçisi ve Eşik Uyarıları (Passive Watcher) [PLANLANDI]
+- [ ] **Periyodik Arka Plan Denetimi (Cron/Timer):**
+  - Yalnız komut verildiğinde çalışan `/durum` haricinde; `tetikleyici.yaml` içinde tanımlanan eşikleri periyodik (ör. 10 dakikada bir) izleyen arka plan bekçisi:
+    ```yaml
+    bekci:
+      aktif: true
+      kontrol_araligi: 10m
+      esikler:
+        disk_doluluk_yuzde: 90
+        ram_doluluk_yuzde: 95
+        cpu_sicaklik_c: 85
+        servisler: ["whatsapp-bridge.service", "systemd-networkd.service"]
+    ```
+- [ ] **Otonom Alarm ve Spam Koruması:**
+  - Eşik aşıldığında veya kritik servis düştüğünde WhatsApp'a acil durum uyarısı (`🚨 Sistem Bekçisi Uyarısı: / disk doluluğu %92!`) gönderilir.
+  - Aynı arıza için 1 saat içinde tekrar mesaj atılmaz (cooldown koruması).
+
+### 21. 🔗 QR Kodsuz 8 Haneli Eşleştirme Kodu (Pairing Code Desteği) [PLANLANDI]
+- [ ] **Whatsmeow Pairing Code Entegrasyonu:**
+  - Whatsmeow kütüphanesinin yerleşik `client.PairPhone(phoneNumber)` API'si kullanılarak `POST /pair-phone` endpoint'i eklenir.
+  - Terminalde QR kod okutmak yerine WhatsApp sunucusundan 8 haneli kod (ör: `ABCD-1234`) alınır.
+  - Kullanıcı telefonunda WhatsApp ▸ Bağlı Cihazlar ▸ "Telefon Numarasıyla Bağla" adımına bu kodu girer.
+  - Ekransız/headless sunucu kurulumlarında ve kamera netleme sorunlarında QR kodsuz hızlı eşleşme sağlar.
+
+### 22. 📦 BÜYÜK BİRLEŞME: İki Repoyu Tek Modüler Monorepoda Toplama [PLANLANDI]
+> **Gerekçe:** `whatsapp-bridge-mcp` ve `whatsapp-tetikleyici` arasındaki çapraz bağımlılıkları (çift TODO, çift Makefile, çift .venv, çift git commit) ortadan kaldırmak; tek `git clone` ile kurulabilen, süreç izolasyonunu bozmadan tek çatıdan yönetilen modüler bir yapıya geçmek.
+
+- [ ] **1. Dizin ve Paket Mimarisi (Modüler Monorepo Tasarımı):**
+  ```text
+  whatsapp-station/ (veya whatsapp-bridge / whatsapp-agent)
+  ├── cmd/
+  │   ├── bridge/          # Go: Whatsmeow soket çekirdeği (:31415 REST & SSE)
+  │   ├── tetikleyici/     # Go: Olay dağıtım motoru (Dispatcher & RBAC)
+  │   └── cli/             # Go: Birleşik yönetim CLI (status, qr, logs, sessions)
+  ├── mcp/                 # Python: FastMCP STDIO sunucusu
+  ├── pipelines/           # Python: Whisper (ses) ve Ollama (görsel/OCR) boruları
+  ├── web/                 # Gömülü Web Dashboard (HTML/JS static assets)
+  ├── config.example.yaml  # Tek, birleşik yapılandırma şablonu
+  ├── Makefile             # Tek komutla derleme, test ve servis yönetimi
+  └── README.md & TODO.md  # Tekil dokümantasyon ve sprint takibi
+  ```
+- [ ] **2. Birleşik Yapılandırma (`config.yaml`):**
+  - `bridge:` (port, host, db_path) ve `tetikleyici:` (users, rules, agents, pipelines) bloklarını tek YAML dosyasında toplama.
+  - Gizli anahtarlar, veritabanı (`whatsmeow.db`) ve telefon/LID verileri için tek birleşik `.gitignore` hijyeni.
+- [ ] **3. Süreç İzolasyonunun (Crash-Isolation) Korunması:**
+  - Whatsmeow köprüsü ve Tetikleyici motorunun bağımsız hata izolasyonu aynen korunacak.
+  - İster iki bağımsız `systemd` servisi olarak, ister tek bir Go binary'sinden alt komutlarla (`wa bridge`, `wa daemon`, `wa cli`) çalıştırılabilecek; biri çökse bile diğeri ayakta kalacak.
+- [ ] **4. Geçiş ve Taşıma Adımları:**
+  - Git geçmişi korunarak (veya temiz squash/merge ile) dosyaları hedef monorepo çatısında toplama.
+  - Bağımlılıkları birleştirme: Go `go.work` veya kök `go.mod`; Python tek `.venv` (`uv` ile `fastmcp`, `whisper`, `torch`).
+  - `Makefile` hedeflerini tekilleştirme (`make build`, `make run`, `make test`, `make verify`).
+  - Sistem servislerini (`~/.config/systemd/user/`) yeni birleşik yollara güncelleme.
 
 ---
 
