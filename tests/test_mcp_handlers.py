@@ -14,6 +14,7 @@ from mcp_server.tools.handlers import (  # noqa: E402
     SendHandler,
     SendMediaHandler,
     SendPollHandler,
+    VotePollHandler,
     SendLocationHandler,
     SendContactHandler,
     ReactionHandler,
@@ -86,6 +87,21 @@ class TestMCPHandlers(unittest.TestCase):
         self.assertIsInstance(result, CallToolResult)
         self.assertFalse(result.is_error)
         self.assertEqual(self.mock_api.calls[0][1], "/send-poll")
+
+    def test_vote_poll_handler(self):
+        handler = VotePollHandler(self.mock_api)
+        result = run(
+            handler.handle(
+                {
+                    "to": "905551234567",
+                    "poll_id": "POLL123",
+                    "options": ["Option 1"],
+                }
+            )
+        )
+        self.assertIsInstance(result, CallToolResult)
+        self.assertFalse(result.is_error)
+        self.assertEqual(self.mock_api.calls[0][1], "/poll-vote")
 
     def test_ask_confirm_handler(self):
         handler = AskConfirmHandler(self.mock_api)
